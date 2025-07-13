@@ -55,6 +55,7 @@ async function login(email, password) {
     await loadFamilyDataFromAPI();
     renderFamilyTree();
     renderUpcomingBirthdays();
+    setupAppEventListeners(); // Setup all app functionality after login
   } catch (error) {
     document.getElementById('login-error').textContent = error.message;
   }
@@ -392,27 +393,8 @@ function setupAuthEventListeners() {
     };
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // familyData should be loaded from js/data.js script tag order
-    if (typeof familyData === 'undefined') {
-        console.error("Family data not loaded! Check script order and js/data.js.");
-        // Display error in UI
-        const treeContainer = document.getElementById('tree-container');
-        if(treeContainer) treeContainer.innerHTML = "<p style='color:red;'>Error: Family data could not be loaded. Please check console.</p>";
-        const birthdaysList = document.getElementById('birthdays-list');
-        if(birthdaysList) birthdaysList.innerHTML = "<li>Data error.</li>";
-        const personInfo = document.getElementById('person-info');
-        if(personInfo) personInfo.innerHTML = "<p>Data error.</p>";
-        return; 
-    }
-    // No need for separate loadFamilyData if data.js is loaded first and familyData is global.
-    renderFamilyTree(); 
-    renderUpcomingBirthdays();
-    // Optionally, display details for the first person or a default message
-    if (familyData.length > 0 && document.getElementById('person-info').textContent.includes("Select a person")){
-        // displayPersonDetails(familyData[0].id); // Uncomment to show first person by default
-    }
-
+// Setup all the app event listeners (only called after successful login)
+function setupAppEventListeners() {
     // Setup Autocompletes
     setupAutocomplete('add-parents-input', 'add-parents-suggestions', 'selected-parents-list', 'add-parents-ids', 'parent');
     setupAutocomplete('add-children-input', 'add-children-suggestions', 'selected-children-list', 'add-children-ids', 'child');
@@ -517,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 100);
         });
     }
-});
+}
 
 function renderFamilyTree() {
     const treeContainer = document.getElementById('tree-container');
