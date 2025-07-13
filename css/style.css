@@ -1,0 +1,699 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 1em 0;
+    text-align: center;
+}
+
+main {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 1em;
+    gap: 1em;
+}
+
+#tree-container {
+    flex: 3;
+    min-width: 300px;
+    background-color: #fff;
+    padding: 1em;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+#details-container {
+    flex: 1;
+    min-width: 250px;
+    background-color: #fff;
+    padding: 1em;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+#birthdays-container {
+    flex-basis: 100%;
+    background-color: #fff;
+    padding: 1em;
+    margin-top: 1em;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+#birthdays-list li {
+    list-style-type: none;
+    padding: 0.5em 0;
+    border-bottom: 1px solid #eee;
+}
+
+#birthdays-list li:last-child {
+    border-bottom: none;
+}
+
+footer {
+    text-align: center;
+    padding: 1em 0;
+    background-color: #333;
+    color: #fff;
+    margin-top: 1em;
+}
+
+/* Placeholder for tree styling */
+.node {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+    display: inline-block;
+    cursor: pointer;
+}
+
+/* Family Blast News Modal Styles */
+.family-blast-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.family-blast-dialog {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.family-blast-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.family-blast-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.family-blast-close:hover {
+    color: #000;
+}
+
+.family-blast-content {
+    margin-bottom: 20px;
+}
+
+.family-blast-search {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.family-blast-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.family-blast-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+}
+
+.family-blast-item:last-child {
+    border-bottom: none;
+}
+
+.family-blast-item:hover {
+    background-color: #f8f9fa;
+}
+
+.family-blast-item.selected {
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196f3;
+}
+
+.family-blast-checkbox {
+    margin-right: 10px;
+}
+
+.family-blast-person-info {
+    flex: 1;
+}
+
+.family-blast-name {
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.family-blast-contact {
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* Contact Status Indicators */
+.contact-status {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.contact-status.available {
+    background-color: #4caf50; /* Green - can receive texts */
+}
+
+.contact-status.phone-only {
+    background-color: #ff9800; /* Orange - phone only */
+}
+
+.contact-status.email-only {
+    background-color: #2196f3; /* Blue - email only */
+}
+
+.contact-status.deceased {
+    background-color: #f44336; /* Red - deceased */
+}
+
+.contact-status.no-contact {
+    background-color: #9e9e9e; /* Gray - no contact info */
+}
+
+.family-blast-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.family-blast-quick-select {
+    display: flex;
+    gap: 10px;
+}
+
+.family-blast-quick-select button {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.family-blast-quick-select button:hover {
+    background-color: #f0f0f0;
+}
+
+.family-blast-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.family-blast-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.family-blast-text {
+    background-color: #4caf50;
+    color: white;
+}
+
+.family-blast-text:hover {
+    background-color: #45a049;
+}
+
+.family-blast-email {
+    background-color: #2196f3;
+    color: white;
+}
+
+.family-blast-email:hover {
+    background-color: #1976d2;
+}
+
+.family-blast-cancel {
+    background-color: #6c757d;
+    color: white;
+}
+
+.family-blast-cancel:hover {
+    background-color: #5a6268;
+}
+
+/* New Tree Styles */
+.tree {
+    padding: 10px;
+}
+
+.tree-node {
+    padding: 5px;
+    margin: 3px 0;
+    border-left: 2px solid #ddd;
+}
+
+.tree-node > span {
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+
+.tree-node > span:hover {
+    background-color: #e0e0e0;
+}
+
+/* New styles for node content wrapper and toggle button */
+.node-content-wrapper {
+    display: flex;
+    align-items: center;
+    padding: 2px 0;
+}
+
+.toggle-button {
+    cursor: pointer;
+    margin-right: 8px;
+    font-weight: bold;
+    font-size: 0.9em;
+    padding: 0px 5px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+    user-select: none;
+}
+
+.toggle-button:hover {
+    background-color: #e0e0e0;
+}
+
+.spouse-node {
+    font-style: italic;
+    color: #555;
+    cursor: pointer;
+}
+
+.children-container {
+    padding-left: 20px;
+    margin-left: 5px;
+}
+
+/* Style for the main tree container if needed */
+#tree-container {
+    flex: 3;
+    min-width: 300px;
+    background-color: #fff;
+    padding: 1em;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+}
+
+/* Profile Picture Styling */
+.profile-pic-details {
+    max-width: 150px;
+    max-height: 200px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.profile-pic-tree-thumbnail {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #bbb;
+    margin-right: 8px;
+    object-fit: cover;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+/* Styling for the Add Person Form */
+#add-person-container {
+    flex-basis: 100%; /* Take full width on a new line */
+    background-color: #fff;
+    padding: 1.5em;
+    margin-top: 1em;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+#add-person-form fieldset {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 1em;
+    margin-bottom: 1em;
+}
+
+#add-person-form legend {
+    font-weight: bold;
+    padding: 0 0.5em;
+    color: #333;
+}
+
+#add-person-form div {
+    margin-bottom: 0.8em;
+}
+
+#add-person-form label {
+    display: block;
+    margin-bottom: 0.3em;
+    font-weight: 500;
+    color: #444;
+}
+
+#add-person-form input[type="text"],
+#add-person-form input[type="email"],
+#add-person-form input[type="tel"],
+#add-person-form input[type="file"],
+#add-person-form textarea {
+    width: calc(100% - 16px); /* Adjust for padding */
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+#add-person-form textarea {
+    resize: vertical;
+}
+
+#add-person-form button[type="submit"] {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+}
+
+#add-person-form button[type="submit"]:hover {
+    background-color: #218838;
+}
+
+/* Autocomplete Styles */
+.autocomplete-suggestions {
+    border: 1px solid #ddd;
+    border-top: none;
+    max-height: 150px;
+    overflow-y: auto;
+    position: relative; /* Or absolute if needed, depends on layout */
+    background-color: white;
+    z-index: 1000; /* Ensure it's above other elements */
+}
+
+.autocomplete-suggestions div {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.autocomplete-suggestions div:hover {
+    background-color: #f0f0f0;
+}
+
+.autocomplete-suggestions .suggestion-item-dob {
+    font-size: 0.8em;
+    color: #777;
+    margin-left: 5px;
+}
+
+.selected-items-list {
+    margin-top: 5px;
+}
+
+.selected-item-tag {
+    display: inline-block;
+    background-color: #e0e0e0;
+    color: #333;
+    padding: 5px 8px;
+    border-radius: 15px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+
+.selected-item-tag .remove-item {
+    margin-left: 8px;
+    color: #900;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Search Section Styles */
+#search-section-container {
+    padding: 10px 1em; /* Match main padding */
+    background-color: #e9e9e9; /* Slightly different background */
+    border-bottom: 1px solid #ccc;
+}
+
+#family-search-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.1em;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+    margin-bottom: 5px;
+}
+
+.search-results-list {
+    max-height: 200px; /* Limit height and make it scrollable */
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-top: none; /* As input has bottom border */
+    border-radius: 0 0 5px 5px;
+}
+
+.search-result-item {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background-color: #f0f0f0;
+}
+
+.search-result-item .result-name {
+    font-weight: bold;
+}
+
+.search-result-item .result-details {
+    font-size: 0.9em;
+    color: #555;
+    margin-left: 8px;
+}
+
+/* Highlight style for tree nodes */
+.tree-node-highlighted > .node-content-wrapper {
+    background-color: #fff8dc; /* Light yellow - Cornsilk */
+    border: 1px dashed #f0ad4e; /* Orange-yellow border */
+    border-radius: 4px;
+    /* Ensure padding doesn't make it jump too much, adjust as needed */
+    /* padding: 1px 3px; */ 
+}
+
+/* Ensure the main tree-node border is not overridden directly if not desired */
+.tree-node-highlighted {
+    /* Example: if you want to make the main left border thicker or different */
+    /* border-left-width: 3px; */
+}
+
+/* Relationship Finder Styles */
+#relationship-finder-container {
+    padding: 1em;
+    background-color: #f9f9f9; /* Slightly different background */
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 1em;
+}
+
+#relationship-finder-container h2 {
+    margin-top: 0;
+    color: #333;
+}
+
+.person-selector-group {
+    margin-bottom: 1em;
+    padding: 0.5em;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+.person-selector-group label {
+    display: block;
+    margin-bottom: 0.3em;
+    font-weight: 500;
+}
+
+.person-selector-group input[type="text"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    margin-bottom: 3px;
+}
+
+.selected-item-display {
+    /* Similar to selected-items-list but for single item */
+    margin-top: 5px;
+    padding: 5px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    min-height: 20px; /* Ensure it has some height even when empty */
+}
+
+.selected-item-display .selected-item-tag {
+    /* Use existing tag style, but we'll only have one */
+    margin-bottom: 0; 
+}
+
+
+#calculate-relationship-button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 0.5em;
+    margin-bottom: 1em;
+}
+
+#calculate-relationship-button:hover {
+    background-color: #0056b3;
+}
+
+#relationship-result-display {
+    margin-top: 1em;
+    padding: 1em;
+    background-color: #e9f7fd;
+    border: 1px solid #bce8f1;
+    border-radius: 5px;
+    min-height: 30px;
+}
+
+#relationship-result-display p {
+    margin: 0;
+    color: #31708f;
+}
+
+/* Actions Toolbar Styles */
+#actions-toolbar {
+    padding: 10px 1em;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #ccc;
+    text-align: center; /* Center button(s) */
+}
+
+#actions-toolbar button {
+    background-color: #6c757d; /* Bootstrap secondary-like color */
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.95em;
+    margin: 0 5px;
+}
+
+#actions-toolbar button:hover {
+    background-color: #5a6268;
+} 
+
+/* Quick Focus Dialog Styles */
+.quick-focus-option:hover {
+    background-color: #f8f9fa !important;
+    border-color: #007bff !important;
+}
+
+.quick-focus-option {
+    transition: all 0.2s ease;
+} 
+
+/* Modal Overlay Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-dialog {
+  background: #fff;
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.25);
+  min-width: 320px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #888;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.modal-dialog h3 {
+  margin-top: 0;
+}
+
+/* Prevent background scroll when modal is open */
+body.modal-open {
+  overflow: hidden;
+} 

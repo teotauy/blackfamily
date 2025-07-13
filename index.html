@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Tree</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Family Tree</h1>
+    </header>
+
+    <div id="actions-toolbar">
+        <button id="generate-holiday-card-pdf-button" type="button">Generate Holiday Card Mailing Labels (PDF)</button>
+        <button id="generate-individual-labels-pdf-button" type="button" style="margin-left: 10px;">Generate Individual Mailing Labels</button>
+        <button id="generate-birthday-list-pdf-button" type="button" style="margin-left: 10px;">Generate Birthday List (PDF)</button>
+        <button id="family-text-blast-button" type="button" style="margin-left: 10px;">📱 Family Text Blast</button>
+        <button id="family-email-blast-button" type="button" style="margin-left: 10px;">📧 Family Email Blast</button>
+        <!-- Placeholder for other global action buttons -->
+    </div>
+
+    <div id="search-section-container">
+        <input type="search" id="family-search-input" placeholder="Search family members...">
+        <div id="family-search-results" class="search-results-list"></div>
+    </div>
+
+    <div id="relationship-finder-container">
+        <h2>Relationship Finder</h2>
+        <div class="person-selector-group">
+            <label for="person1-relationship-input">Person 1:</label>
+            <input type="text" id="person1-relationship-input" autocomplete="off" placeholder="Search for first person...">
+            <div id="person1-relationship-suggestions" class="autocomplete-suggestions"></div>
+            <div id="selected-person1-display" class="selected-item-display"></div> 
+            <input type="hidden" id="person1-relationship-id">
+        </div>
+        <div class="person-selector-group">
+            <label for="person2-relationship-input">Person 2:</label>
+            <input type="text" id="person2-relationship-input" autocomplete="off" placeholder="Search for second person...">
+            <div id="person2-relationship-suggestions" class="autocomplete-suggestions"></div>
+            <div id="selected-person2-display" class="selected-item-display"></div>
+            <input type="hidden" id="person2-relationship-id">
+        </div>
+        <button id="calculate-relationship-button" type="button">Calculate Relationship</button>
+        <div id="relationship-result-display">
+            <p>Select two people to see their relationship.</p>
+        </div>
+    </div>
+
+    <main>
+        <section id="tree-container">
+            <h2>Family Tree Visualization</h2>
+            <!-- Tree will be rendered here by JavaScript -->
+        </section>
+
+        <aside id="details-container">
+            <h2>Person Details</h2>
+            <div id="person-info">
+                <!-- Selected person's details will be shown here -->
+                <p>Select a person from the tree to see their details.</p>
+            </div>
+        </aside>
+
+        <section id="birthdays-container">
+            <h2>Upcoming Birthdays</h2>
+            <ul id="birthdays-list">
+                <!-- Upcoming birthdays will be listed here -->
+                <li>No birthdays soon.</li>
+            </ul>
+        </section>
+
+        <!-- New section for Random Family Fact -->
+        <section id="random-fact-container">
+            <h2>Family Fact</h2>
+            <div id="random-fact-display">
+                <p>Loading fact...</p>
+            </div>
+        </section>
+
+        <section id="add-person-container">
+            <h2>Add New Person</h2>
+            <form id="add-person-form">
+                <fieldset>
+                    <legend>Basic Information</legend>
+                    <div>
+                        <label for="add-name">Full Name:</label>
+                        <input type="text" id="add-name" name="name" required>
+                    </div>
+                    <div>
+                        <label for="add-nickname">Nickname:</label>
+                        <input type="text" id="add-nickname" name="nickname" placeholder="Preferred name (used in tree)">
+                    </div>
+                    <div>
+                        <label for="add-middleName">Middle Name:</label>
+                        <input type="text" id="add-middleName" name="middleName">
+                    </div>
+                    <div>
+                        <label for="add-birthDate">Birth Date:</label>
+                        <input type="text" id="add-birthDate" name="birthDate" placeholder="YYYY-MM-DD or free text">
+                    </div>
+                    <div>
+                        <label for="add-pronouns">Pronouns:</label>
+                        <select id="add-pronouns" name="pronouns">
+                            <option value="">-- Select --</option>
+                            <option value="he/him">he/him</option>
+                            <option value="she/her">she/her</option>
+                            <option value="they/them">they/them</option>
+                            <option value="he/they">he/they</option>
+                            <option value="she/they">she/they</option>
+                            <option value="ze/zir">ze/zir</option>
+                            <option value="xe/xem">xe/xem</option>
+                            <option value="custom">Custom...</option>
+                        </select>
+                        <input type="text" id="add-pronouns-custom" name="pronounsCustom" placeholder="Enter custom pronouns" style="display:none; margin-top:5px;">
+                    </div>
+                    <div>
+                        <label for="add-deceased">
+                            <input type="checkbox" id="add-deceased" name="deceased">
+                            Deceased
+                        </label>
+                    </div>
+                    <div>
+                        <label for="add-deathDate">Death Date:</label>
+                        <input type="text" id="add-deathDate" name="deathDate" placeholder="YYYY-MM-DD or free text" disabled>
+                    </div>
+                    <div>
+                        <label for="add-placeOfBirth">Place of Birth:</label>
+                        <input type="text" id="add-placeOfBirth" name="placeOfBirth">
+                    </div>
+                    <div>
+                        <label for="add-placeOfDeath">Place of Death:</label>
+                        <input type="text" id="add-placeOfDeath" name="placeOfDeath">
+                    </div>
+                    <div>
+                        <label for="add-profilePic">Profile Picture:</label>
+                        <input type="file" id="add-profilePic" name="profilePic" accept="image/*">
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Relationships (Enter IDs, comma-separated)</legend>
+                    <div>
+                        <label for="add-parents-input">Parents:</label>
+                        <input type="text" id="add-parents-input" autocomplete="off" placeholder="Type to search for parents...">
+                        <div id="add-parents-suggestions" class="autocomplete-suggestions"></div>
+                        <div id="selected-parents-list" class="selected-items-list">
+                            <!-- Selected parents will be shown here -->
+                        </div>
+                        <!-- Hidden input to store actual parent IDs -->
+                        <input type="hidden" id="add-parents-ids" name="parents_ids">
+                    </div>
+                    <div>
+                        <label for="add-children-input">Children:</label>
+                        <input type="text" id="add-children-input" autocomplete="off" placeholder="Type to search for children...">
+                        <div id="add-children-suggestions" class="autocomplete-suggestions"></div>
+                        <div id="selected-children-list" class="selected-items-list">
+                            <!-- Selected children will be shown here -->
+                        </div>
+                        <input type="hidden" id="add-children-ids" name="children_ids">
+                    </div>
+                    <p><strong>Marriage (Simplified for initial entry):</strong></p>
+                    <div>
+                        <label for="add-spouse-input">Spouse:</label>
+                        <input type="text" id="add-spouse-input" autocomplete="off" placeholder="Type to search for spouse...">
+                        <div id="add-spouse-suggestions" class="autocomplete-suggestions"></div>
+                        <div id="selected-spouse-display" class="selected-items-list">
+                            <!-- Selected spouse will be shown here -->
+                        </div>
+                        <input type="hidden" id="add-spouse-id-hidden" name="spouse_id_hidden">
+                    </div>
+                    <div>
+                        <label for="add-weddingDate">Wedding Date:</label>
+                        <input type="text" id="add-weddingDate" name="weddingDate" placeholder="YYYY-MM-DD or free text">
+                    </div>
+                    <div>
+                        <label for="add-divorced">
+                            <input type="checkbox" id="add-divorced" name="divorced">
+                            Divorced
+                        </label>
+                    </div>
+                    <div>
+                        <label for="add-divorceDate">Divorce Date:</label>
+                        <input type="text" id="add-divorceDate" name="divorceDate" placeholder="YYYY-MM-DD or free text" disabled>
+                    </div>
+                    <div>
+                        <label for="add-weddingPlace">Wedding Place:</label>
+                        <input type="text" id="add-weddingPlace" name="weddingPlace">
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Contact Information</legend>
+                    <div>
+                        <label for="add-email">Email:</label>
+                        <input type="email" id="add-email" name="email">
+                    </div>
+                    <div>
+                        <label for="add-phone">Phone:</label>
+                        <input type="tel" id="add-phone" name="phone">
+                    </div>
+                    <div>
+                        <label for="add-can-receive-texts">
+                            <input type="checkbox" id="add-can-receive-texts" name="canReceiveTexts" checked>
+                            Can receive text messages
+                        </label>
+                    </div>
+                    <div>
+                        <label for="add-street">Street:</label>
+                        <input type="text" id="add-street" name="street">
+                    </div>
+                    <div>
+                        <label for="add-city">City:</label>
+                        <input type="text" id="add-city" name="city">
+                    </div>
+                    <div>
+                        <label for="add-state">State:</label>
+                        <input type="text" id="add-state" name="state">
+                    </div>
+                    <div>
+                        <label for="add-zip">ZIP Code:</label>
+                        <input type="text" id="add-zip" name="zip">
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Additional Information</legend>
+                    <div>
+                        <label for="add-bio">Biography:</label>
+                        <textarea id="add-bio" name="bio" rows="3"></textarea>
+                    </div>
+                    <div>
+                        <label for="add-notes">Notes:</label>
+                        <textarea id="add-notes" name="notes" rows="2"></textarea>
+                    </div>
+                </fieldset>
+                <button type="submit">Add Person</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Your Family</p>
+    </footer>
+
+    <script src="js/data.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html> 
