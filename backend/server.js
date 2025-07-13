@@ -4,6 +4,9 @@ const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 4000;
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 app.use(cors());
 app.use(express.json());
@@ -50,10 +53,110 @@ db.serialize(() => {
   )`);
 });
 
+// --- Users Table ---
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    is_admin INTEGER DEFAULT 0,
+    approved INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`);
+});
+
+// --- Seed Initial Admin User ---
+db.get('SELECT COUNT(*) as count FROM users', async (err, row) => {
+  if (!err && row.count === 0) {
+    const hash = await bcrypt.hash('adminpassword', 10);
+    db.run('INSERT INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1)', ['admin@familytree.com', hash]);
+    console.log('Seeded initial admin user: admin@familytree.com / adminpassword');
+  }
+});
+
+// --- Auth Middleware ---
+function authRequired(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  const token = auth.split(' ')[1];
+  jwt.verify(token, SECRET, (err, user) => {
+    if (err) return res.status(401).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+}
+function adminRequired(req, res, next) {
+  if (!req.user || !req.user.is_admin) return res.status(403).json({ error: 'Admin only' });
+  next();
+}
+
+// --- Register ---
+app.post('/api/register', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  const hash = await bcrypt.hash(password, 10);
+  db.run('INSERT INTO users (email, password_hash) VALUES (?, ?)', [email, hash], function(err) {
+    if (err) return res.status(400).json({ error: 'Email already exists' });
+    res.json({ message: 'Registration successful, pending admin approval.' });
+  });
+});
+
+// --- Login ---
+app.post('/api/login', (req, res) => {
+  const { email, password } = req.body;
+  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
+    if (err || !user) return res.status(401).json({ error: 'Invalid credentials' });
+    if (!user.approved) return res.status(403).json({ error: 'Not approved by admin yet' });
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
+    const token = jwt.sign({ id: user.id, email: user.email, is_admin: !!user.is_admin }, SECRET, { expiresIn: '7d' });
+    res.json({ token, is_admin: !!user.is_admin });
+  });
+});
+
+// --- List Pending Users (Admin) ---
+app.get('/api/users/pending', authRequired, adminRequired, (req, res) => {
+  db.all('SELECT id, email, created_at FROM users WHERE approved = 0', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// --- Approve User (Admin) ---
+app.post('/api/users/:id/approve', authRequired, adminRequired, (req, res) => {
+  db.run('UPDATE users SET approved = 1 WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ approved: true });
+  });
+});
+
+// --- Reject/Delete User (Admin) ---
+app.post('/api/users/:id/reject', authRequired, adminRequired, (req, res) => {
+  db.run('DELETE FROM users WHERE id = ?', [req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ deleted: true });
+  });
+});
+
+// --- Protect Family Tree Endpoints ---
+function treeAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  const token = auth.split(' ')[1];
+  jwt.verify(token, SECRET, (err, user) => {
+    if (err) return res.status(401).json({ error: 'Invalid token' });
+    if (!user) return res.status(401).json({ error: 'Invalid user' });
+    req.user = user;
+    next();
+  });
+}
+// Example: app.get('/api/people', treeAuth, ...)
+// For now, you can add treeAuth to all /api/people and /api/relationships endpoints to require login.
+
 // --- API Endpoints ---
 
 // Get all people
-app.get('/api/people', (req, res) => {
+app.get('/api/people', treeAuth, (req, res) => {
   db.all('SELECT * FROM people', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);

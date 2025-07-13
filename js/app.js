@@ -4,13 +4,216 @@ const defaultProfilePic = "images/placeholder_default.png"; // Path to your defa
 // --- API URL ---
 const API_BASE = window.API_BASE_URL || 'http://localhost:4000/api';
 
+// --- Authentication State ---
+let currentUser = null;
+let authToken = localStorage.getItem('authToken');
+
+// --- Auth Functions ---
+function showAuthModal() {
+  document.getElementById('auth-modal').style.display = 'block';
+  showLoginForm();
+}
+
+function hideAuthModal() {
+  document.getElementById('auth-modal').style.display = 'none';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('register-error').textContent = '';
+}
+
+function showLoginForm() {
+  document.getElementById('auth-modal-title').textContent = 'Login';
+  document.getElementById('login-form').style.display = 'block';
+  document.getElementById('register-form').style.display = 'none';
+  document.getElementById('toggle-auth-mode').textContent = "Don't have an account? Register";
+}
+
+function showRegisterForm() {
+  document.getElementById('auth-modal-title').textContent = 'Register';
+  document.getElementById('login-form').style.display = 'none';
+  document.getElementById('register-form').style.display = 'block';
+  document.getElementById('toggle-auth-mode').textContent = 'Already have an account? Login';
+}
+
+async function login(email, password) {
+  try {
+    const response = await fetch(`${API_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Login failed');
+    }
+    
+    authToken = data.token;
+    currentUser = { email, is_admin: data.is_admin };
+    localStorage.setItem('authToken', authToken);
+    hideAuthModal();
+    updateUIForAuth();
+    await loadFamilyDataFromAPI();
+    renderFamilyTree();
+    renderUpcomingBirthdays();
+  } catch (error) {
+    document.getElementById('login-error').textContent = error.message;
+  }
+}
+
+async function register(email, password) {
+  try {
+    const response = await fetch(`${API_BASE}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Registration failed');
+    }
+    
+    document.getElementById('register-error').textContent = 'Registration successful! Please wait for admin approval.';
+    setTimeout(() => {
+      showLoginForm();
+    }, 2000);
+  } catch (error) {
+    document.getElementById('register-error').textContent = error.message;
+  }
+}
+
+function logout() {
+  authToken = null;
+  currentUser = null;
+  localStorage.removeItem('authToken');
+  updateUIForAuth();
+  showAuthModal();
+}
+
+function updateUIForAuth() {
+  const isLoggedIn = !!authToken;
+  const isAdmin = currentUser?.is_admin;
+  
+  // Show/hide logout button
+  document.getElementById('logout-btn').style.display = isLoggedIn ? 'block' : 'none';
+  
+  // Show/hide main app content
+  const mainContent = document.querySelector('main');
+  const actionsToolbar = document.getElementById('actions-toolbar');
+  const searchSection = document.getElementById('search-section-container');
+  const relationshipFinder = document.getElementById('relationship-finder-container');
+  
+  if (isLoggedIn) {
+    mainContent.style.display = 'block';
+    actionsToolbar.style.display = 'block';
+    searchSection.style.display = 'block';
+    relationshipFinder.style.display = 'block';
+    
+    // Add admin button if admin
+    if (isAdmin && !document.getElementById('admin-btn')) {
+      const adminBtn = document.createElement('button');
+      adminBtn.id = 'admin-btn';
+      adminBtn.textContent = '👑 Admin';
+      adminBtn.style.cssText = 'position:fixed; top:10px; right:80px; z-index:1000;';
+      adminBtn.onclick = showAdminDashboard;
+      document.body.appendChild(adminBtn);
+    }
+  } else {
+    mainContent.style.display = 'none';
+    actionsToolbar.style.display = 'none';
+    searchSection.style.display = 'none';
+    relationshipFinder.style.display = 'none';
+    
+    // Remove admin button
+    const adminBtn = document.getElementById('admin-btn');
+    if (adminBtn) adminBtn.remove();
+  }
+}
+
+async function showAdminDashboard() {
+  try {
+    const response = await fetch(`${API_BASE}/users/pending`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    const pendingUsers = await response.json();
+    
+    const list = document.getElementById('pending-users-list');
+    list.innerHTML = '';
+    
+    if (pendingUsers.length === 0) {
+      list.innerHTML = '<li>No pending users</li>';
+    } else {
+      pendingUsers.forEach(user => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          ${user.email} (registered: ${new Date(user.created_at).toLocaleDateString()})
+          <button onclick="approveUser(${user.id})">Approve</button>
+          <button onclick="rejectUser(${user.id})">Reject</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+    
+    document.getElementById('admin-modal').style.display = 'block';
+  } catch (error) {
+    console.error('Error loading pending users:', error);
+  }
+}
+
+async function approveUser(userId) {
+  try {
+    await fetch(`${API_BASE}/users/${userId}/approve`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    showAdminDashboard(); // Refresh the list
+  } catch (error) {
+    console.error('Error approving user:', error);
+  }
+}
+
+async function rejectUser(userId) {
+  if (confirm('Are you sure you want to reject this user?')) {
+    try {
+      await fetch(`${API_BASE}/users/${userId}/reject`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      showAdminDashboard(); // Refresh the list
+    } catch (error) {
+      console.error('Error rejecting user:', error);
+    }
+  }
+}
+
+// --- API Helper with Auth ---
+async function apiCall(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`;
+  const config = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+      ...options.headers
+    }
+  };
+  
+  const response = await fetch(url, config);
+  if (response.status === 401) {
+    logout();
+    return null;
+  }
+  return response;
+}
+
 // --- Load data from backend on page load ---
 let familyData = [];
 async function loadFamilyDataFromAPI() {
     const [peopleRes, relsRes] = await Promise.all([
-        fetch(`${API_BASE}/people`),
-        fetch(`${API_BASE}/relationships`)
+        apiCall('/people'),
+        apiCall('/relationships')
     ]);
+    if (!peopleRes || !relsRes) return;
     const people = await peopleRes.json();
     const relationships = await relsRes.json();
     // Build relationships into people
@@ -38,9 +241,23 @@ async function loadFamilyDataFromAPI() {
 
 // --- Replace initial data load ---
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadFamilyDataFromAPI();
-    renderFamilyTree();
-    renderUpcomingBirthdays();
+    // Check if user is already logged in
+    if (authToken) {
+        // Try to load data - if it fails, user will be logged out
+        await loadFamilyDataFromAPI();
+        if (familyData.length > 0 || authToken) { // If we have data or still have token
+            renderFamilyTree();
+            renderUpcomingBirthdays();
+            updateUIForAuth();
+        }
+    } else {
+        // Show login modal
+        showAuthModal();
+    }
+    
+    // Setup auth event listeners
+    setupAuthEventListeners();
+    
     // ... existing code ...
     // Remove export button logic
 });
@@ -48,37 +265,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 // --- Replace add/edit/delete person/relationship logic with API calls ---
 // Example for adding a person:
 async function addPersonAPI(personObj) {
-    const res = await fetch(`${API_BASE}/people`, {
+    const res = await apiCall('/people', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(personObj)
     });
+    if (!res) return null;
     const data = await res.json();
     return data.id;
 }
 
 async function updatePersonAPI(id, personObj) {
-    await fetch(`${API_BASE}/people/${id}`, {
+    await apiCall(`/people/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(personObj)
     });
 }
 
 async function deletePersonAPI(id) {
-    await fetch(`${API_BASE}/people/${id}`, { method: 'DELETE' });
+    await apiCall(`/people/${id}`, { method: 'DELETE' });
 }
 
 async function addRelationshipAPI(person_id, related_id, type) {
-    await fetch(`${API_BASE}/relationships`, {
+    await apiCall('/relationships', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ person_id, related_id, type })
     });
 }
 
 async function deleteRelationshipAPI(relId) {
-    await fetch(`${API_BASE}/relationships/${relId}`, { method: 'DELETE' });
+    await apiCall(`/relationships/${relId}`, { method: 'DELETE' });
 }
 
 // --- Existing code ...
@@ -130,6 +345,51 @@ function displayRandomFact() {
 
     const factText = selectedFactFunction();
     factDisplayElement.innerHTML = `<p>${factText}</p>`;
+}
+
+function setupAuthEventListeners() {
+    // Auth modal events
+    document.getElementById('close-auth-modal').onclick = hideAuthModal;
+    document.getElementById('toggle-auth-mode').onclick = (e) => {
+        e.preventDefault();
+        if (document.getElementById('login-form').style.display === 'none') {
+            showLoginForm();
+        } else {
+            showRegisterForm();
+        }
+    };
+    
+    // Login form
+    document.getElementById('login-form').onsubmit = (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        login(email, password);
+    };
+    
+    // Register form
+    document.getElementById('register-form').onsubmit = (e) => {
+        e.preventDefault();
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        register(email, password);
+    };
+    
+    // Logout button
+    document.getElementById('logout-btn').onclick = logout;
+    
+    // Admin modal events
+    document.getElementById('close-admin-modal').onclick = () => {
+        document.getElementById('admin-modal').style.display = 'none';
+    };
+    
+    // Close modals when clicking outside
+    window.onclick = (event) => {
+        const authModal = document.getElementById('auth-modal');
+        const adminModal = document.getElementById('admin-modal');
+        if (event.target === authModal) hideAuthModal();
+        if (event.target === adminModal) adminModal.style.display = 'none';
+    };
 }
 
 document.addEventListener('DOMContentLoaded', () => {
