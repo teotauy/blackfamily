@@ -1,17 +1,26 @@
-// Family Tree Backend API (Node.js + Express + SQLite)
+
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 const cors = require('cors');
-const app = express();
-const PORT = process.env.PORT || 5000;
+
+// Import the existing backend server logic
+const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
 const SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint for Railway
+// Serve static files (frontend) from the root directory
+app.use(express.static('./', {
+  index: 'index.html'
+}));
+
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
@@ -150,8 +159,6 @@ function treeAuth(req, res, next) {
     next();
   });
 }
-// Example: app.get('/api/people', treeAuth, ...)
-// For now, you can add treeAuth to all /api/people and /api/relationships endpoints to require login.
 
 // --- API Endpoints ---
 
@@ -237,7 +244,12 @@ app.delete('/api/relationships/:id', (req, res) => {
   });
 });
 
+// Catch-all handler: send back index.html for client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // --- Start Server ---
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Family Tree API server running at http://0.0.0.0:${PORT}`);
-}); 
+  console.log(`Family Tree server running at http://0.0.0.0:${PORT}`);
+});
