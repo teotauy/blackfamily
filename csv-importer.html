@@ -432,6 +432,10 @@
             color: #7f8c8d;
             font-style: italic;
         }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
     </style>
 </head>
 <body>
@@ -456,7 +460,7 @@
 
             <div class="section">
                 <h2>📁 Upload or Paste CSV Data</h2>
-                
+
                 <div class="input-group">
                     <label for="csvFile">Upload CSV File:</label>
                     <div class="file-upload" id="fileUpload">
@@ -477,13 +481,14 @@
 
             <div class="section hidden" id="previewSection">
                 <h2>👀 Data Preview & Validation</h2>
-                
+
                 <div class="copy-section hidden" id="copySection">
                     <h3>✅ Data Ready for Import</h3>
                     <p>Your data has been processed and is ready to copy to your family tree app.</p>
                     <button class="btn btn-success" id="copyBtn">📋 Copy to Clipboard</button>
                     <button class="btn btn-warning" id="downloadBtn">💾 Download JSON</button>
-                    
+                    <button class="btn btn-primary" id="directImportBtn">🚀 Import Directly to Family Tree</button>
+
                     <div class="json-output" id="jsonOutput">
                         <!-- JSON output will be shown here -->
                     </div>
@@ -505,7 +510,7 @@
                 // File upload
                 const fileUpload = document.getElementById('fileUpload');
                 const csvFile = document.getElementById('csvFile');
-                
+
                 fileUpload.addEventListener('click', () => csvFile.click());
                 fileUpload.addEventListener('dragover', this.handleDragOver.bind(this));
                 fileUpload.addEventListener('drop', this.handleDrop.bind(this));
@@ -516,6 +521,8 @@
                 document.getElementById('clearBtn').addEventListener('click', this.clearAll.bind(this));
                 document.getElementById('copyBtn').addEventListener('click', this.copyToClipboard.bind(this));
                 document.getElementById('downloadBtn').addEventListener('click', this.downloadJSON.bind(this));
+                // New button
+                document.getElementById('directImportBtn').addEventListener('click', this.directImport.bind(this));
             }
 
             handleDragOver(e) {
@@ -526,7 +533,7 @@
             handleDrop(e) {
                 e.preventDefault();
                 document.getElementById('fileUpload').classList.remove('dragover');
-                
+
                 const files = e.dataTransfer.files;
                 if (files.length > 0 && files[0].type === 'text/csv') {
                     this.readFile(files[0]);
@@ -561,43 +568,43 @@
 
                 console.log('🚀 Starting CSV processing...');
                 this.showLoading();
-                
+
                 // Set a timeout to detect if processing hangs
                 window.processingTimeout = setTimeout(() => {
                     console.warn('⚠️ Processing taking longer than expected...');
                     this.updateProgress(2, 50, 'Still finding long lost relatives... (this may take a moment)');
                 }, 5000); // 5 seconds
-                
+
                 // Set a hard timeout to prevent infinite hanging
                 window.hardTimeout = setTimeout(() => {
                     console.error('❌ Processing timeout - taking too long');
                     this.showError('Processing is taking too long. Please try with a smaller dataset or check your CSV format.');
                 }, 30000); // 30 seconds
-                
+
                 try {
                     // Simulate processing with progress updates
                     setTimeout(() => {
                         console.log('📊 Step 1: Parsing CSV data...');
                         this.updateProgress(1, 25, 'Parsing CSV data...');
-                        
+
                         setTimeout(() => {
                             try {
                                 console.log('🔍 Step 2: Finding long lost relatives...');
                                 this.parseCSV(csvData);
                                 this.updateProgress(2, 50, 'Finding long lost relatives...');
-                                
+
                                 setTimeout(() => {
                                     try {
                                         console.log('✅ Step 3: Generating family tree preview...');
                                         this.validateData();
                                         this.updateProgress(3, 75, 'Generating family tree preview...');
-                                        
+
                                         setTimeout(() => {
                                             try {
                                                 console.log('🎉 Step 4: Family reunion complete!');
                                                 this.generatePreview();
                                                 this.updateProgress(3, 100, 'Family reunion complete! 🎉');
-                                                
+
                                                 setTimeout(() => {
                                                     console.log('✅ Processing finished successfully');
                                                     clearTimeout(window.processingTimeout);
@@ -678,6 +685,7 @@
                                 <p>Your data has been processed and is ready to copy to your family tree app.</p>
                                 <button class="btn btn-success" id="copyBtn">📋 Copy to Clipboard</button>
                                 <button class="btn btn-warning" id="downloadBtn">💾 Download JSON</button>
+                                <button class="btn btn-primary" id="directImportBtn">🚀 Import Directly to Family Tree</button>
                                 <div class="json-output" id="jsonOutput"></div>
                             </div>
                         `;
@@ -711,10 +719,10 @@
                 const result = [];
                 let current = '';
                 let inQuotes = false;
-                
+
                 for (let i = 0; i < line.length; i++) {
                     const char = line[i];
-                    
+
                     if (char === '"') {
                         inQuotes = !inQuotes;
                     } else if (char === ',' && !inQuotes) {
@@ -724,7 +732,7 @@
                         current += char;
                     }
                 }
-                
+
                 result.push(current);
                 return result.map(item => item.replace(/^"|"$/g, ''));
             }
@@ -750,12 +758,12 @@
             validateData() {
                 this.errors = [];
                 this.warnings = [];
-                
+
                 console.log('🔍 Starting validation of', this.processedData.length, 'rows...');
 
                 this.processedData.forEach((row, index) => {
                     const rowNum = index + 2; // +2 because of 0-based index and header row
-                    
+
                     console.log(`📋 Validating row ${rowNum}:`, row);
 
                     // Accept either Name, or (First Name and Last Name)
@@ -769,7 +777,7 @@
                     // Accept DOB in MM/DD/YY, MM/DD/YYYY, or YYYY-MM-DD
                     const dateVal = row['DOB'] || row['Birth Date'];
                     console.log(`📅 Row ${rowNum}: DOB value:`, JSON.stringify(dateVal), 'Type:', typeof dateVal);
-                    
+
                     if (!dateVal || dateVal.trim() === '') {
                         console.log(`⚠️ Row ${rowNum}: Missing birth date - will be set to empty string`);
                         // Don't make this an error - just a warning
@@ -805,7 +813,7 @@
                         this.warnings.push(`Row ${rowNum}: Pronouns format may be invalid`);
                     }
                 });
-                
+
                 console.log('✅ Validation complete. Errors:', this.errors.length, 'Warnings:', this.warnings.length);
             }
 
@@ -828,7 +836,7 @@
 
             generatePreview() {
                 const previewSection = document.getElementById('previewSection');
-                
+
                 // Show copy section if no errors
                 if (this.errors.length === 0) {
                     // Create the copy section if it doesn't exist
@@ -841,20 +849,23 @@
                                 <p>Your data has been processed and is ready to copy to your family tree app.</p>
                                 <button class="btn btn-success" id="copyBtn">📋 Copy to Clipboard</button>
                                 <button class="btn btn-warning" id="downloadBtn">💾 Download JSON</button>
+                                <button class="btn btn-primary" id="directImportBtn">🚀 Import Directly to Family Tree</button>
                                 <div class="json-output" id="jsonOutput"></div>
                             </div>
                         `;
                         copySection = document.getElementById('copySection');
-                        
+
                         // Re-attach event listeners
                         setTimeout(() => {
                             const copyBtn = document.getElementById('copyBtn');
                             if (copyBtn) copyBtn.addEventListener('click', this.copyToClipboard.bind(this));
                             const downloadBtn = document.getElementById('downloadBtn');
                             if (downloadBtn) downloadBtn.addEventListener('click', this.downloadJSON.bind(this));
+                            const directImportBtn = document.getElementById('directImportBtn');
+                            if(directImportBtn) directImportBtn.addEventListener('click', this.directImport.bind(this));
                         }, 0);
                     }
-                    
+
                     this.generateJSON();
                 } else {
                     // Show validation errors
@@ -942,7 +953,7 @@
             async copyToClipboard() {
                 const jsonOutput = document.getElementById('jsonOutput');
                 const text = jsonOutput.textContent;
-                
+
                 try {
                     await navigator.clipboard.writeText(text);
                     alert('✅ Data copied to clipboard! You can now paste it into your family tree app.');
@@ -970,6 +981,39 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
+            }
+
+            async directImport() {
+                const jsonOutput = document.getElementById('jsonOutput');
+                const familyData = JSON.parse(jsonOutput.textContent);
+
+                // Replace with your actual API endpoint
+                const apiUrl = '/api/family-tree';
+
+                try {
+                    // Send each person to the backend
+                    for (const person of familyData) {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(person)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        console.log('✅ Person imported successfully:', result);
+                    }
+
+                    alert('🎉 All family members imported successfully!');
+                } catch (error) {
+                    console.error('❌ Error importing family data:', error);
+                    alert('❌ Error importing family data. Check the console for details.');
+                }
             }
 
             clearAll() {
@@ -1013,7 +1057,7 @@
             updateProgress(step, percentage, text) {
                 const progressBar = document.getElementById('progressBar');
                 const progressText = document.getElementById('progressText');
-                
+
                 if (progressBar && progressText) {
                     progressBar.style.width = percentage + '%';
                     progressText.textContent = text;
@@ -1023,7 +1067,7 @@
                 for (let i = 1; i <= 3; i++) {
                     const stepElement = document.getElementById(`step${i}`);
                     const stepIcon = stepElement?.querySelector('.step-icon');
-                    
+
                     if (i < step) {
                         stepElement?.classList.add('completed');
                         stepElement?.classList.remove('active');
@@ -1053,4 +1097,4 @@
         });
     </script>
 </body>
-</html> 
+</html>
