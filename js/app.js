@@ -2,11 +2,12 @@ const generationColors = ['#4A90E2', '#50E3C2', '#F5A623', '#BD10E0', '#7ED321',
 const defaultProfilePic = "images/placeholder_default.png"; // Path to your default placeholder
 
 // --- API URL ---
-const API_BASE = window.API_BASE_URL || 'http://localhost:4000/api';
+const API_BASE = window.API_BASE_URL || '/api';
 
 // --- Authentication State ---
 let currentUser = null;
 let authToken = localStorage.getItem('authToken');
+let familyData = [];
 
 // --- Auth Functions ---
 function showAuthModal() {
@@ -208,7 +209,6 @@ async function apiCall(endpoint, options = {}) {
 }
 
 // --- Load data from backend on page load ---
-let familyData = [];
 async function loadFamilyDataFromAPI() {
     try {
         const [peopleRes, relsRes] = await Promise.all([
