@@ -987,32 +987,68 @@
                 const jsonOutput = document.getElementById('jsonOutput');
                 const familyData = JSON.parse(jsonOutput.textContent);
 
-                // Replace with your actual API endpoint
-                const apiUrl = '/api/family-tree';
+                // Get auth token from parent window
+                let authToken = null;
+                try {
+                    authToken = window.opener?.localStorage.getItem('authToken') || localStorage.getItem('authToken');
+                } catch (e) {
+                    console.warn('Could not access parent window localStorage');
+                }
+
+                if (!authToken) {
+                    alert('❌ Please make sure you are logged in to the family tree app first.');
+                    return;
+                }
+
+                const apiUrl = '/api/people';
 
                 try {
                     // Send each person to the backend
+                    let successCount = 0;
                     for (const person of familyData) {
+                        // Transform person data to match backend format
+                        const personData = {
+                            name: person.name,
+                            birthDate: person.birthDate || null,
+                            deathDate: null,
+                            pronouns: person.pronouns || null,
+                            bio: person.bio || null,
+                            notes: null,
+                            contact: person.contact || {}
+                        };
+
                         const response = await fetch(apiUrl, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`
                             },
-                            body: JSON.stringify(person)
+                            body: JSON.stringify(personData)
                         });
 
                         if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                            const errorData = await response.json();
+                            throw new Error(`HTTP ${response.status}: ${errorData.error || 'Unknown error'}`);
                         }
 
                         const result = await response.json();
                         console.log('✅ Person imported successfully:', result);
+                        successCount++;
                     }
 
-                    alert('🎉 All family members imported successfully!');
+                    alert(`🎉 Successfully imported ${successCount} family members to your family tree!`);
+                    
+                    // Try to refresh the parent window if it exists
+                    if (window.opener && window.opener.location) {
+                        try {
+                            window.opener.location.reload();
+                        } catch (e) {
+                            console.log('Could not refresh parent window');
+                        }
+                    }
                 } catch (error) {
                     console.error('❌ Error importing family data:', error);
-                    alert('❌ Error importing family data. Check the console for details.');
+                    alert(`❌ Error importing family data: ${error.message}\n\nPlease check the console for more details.`);
                 }
             }
 
