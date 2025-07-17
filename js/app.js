@@ -210,34 +210,41 @@ async function apiCall(endpoint, options = {}) {
 // --- Load data from backend on page load ---
 let familyData = [];
 async function loadFamilyDataFromAPI() {
-    const [peopleRes, relsRes] = await Promise.all([
-        apiCall('/people'),
-        apiCall('/relationships')
-    ]);
-    if (!peopleRes || !relsRes) return;
-    const people = await peopleRes.json();
-    const relationships = await relsRes.json();
-    // Build relationships into people
-    const personMap = new Map(people.map(p => [p.id, { ...p, parents: [], children: [], marriages: [], contact: {
-        email: p.contact_email,
-        phone: p.contact_phone,
-        street: p.contact_street,
-        city: p.contact_city,
-        state: p.contact_state,
-        zip: p.contact_zip
-    }}]));
-    relationships.forEach(rel => {
-        const person = personMap.get(rel.person_id);
-        if (!person) return;
-        if (rel.type === 'parent') {
-            person.parents.push(rel.related_id);
-        } else if (rel.type === 'child') {
-            person.children.push(rel.related_id);
-        } else if (rel.type === 'spouse') {
-            person.marriages.push({ spouseId: rel.related_id });
+    try {
+        const [peopleRes, relsRes] = await Promise.all([
+            apiCall('/people'),
+            apiCall('/relationships')
+        ]);
+        if (!peopleRes || !relsRes) {
+            console.error('Failed to load data from API');
+            return;
         }
-    });
-    familyData = Array.from(personMap.values());
+        const people = await peopleRes.json();
+        const relationships = await relsRes.json();
+        // Build relationships into people
+        const personMap = new Map(people.map(p => [p.id, { ...p, parents: [], children: [], marriages: [], contact: {
+            email: p.contact_email,
+            phone: p.contact_phone,
+            street: p.contact_street,
+            city: p.contact_city,
+            state: p.contact_state,
+            zip: p.contact_zip
+        }}]));
+        relationships.forEach(rel => {
+            const person = personMap.get(rel.person_id);
+            if (!person) return;
+            if (rel.type === 'parent') {
+                person.parents.push(rel.related_id);
+            } else if (rel.type === 'child') {
+                person.children.push(rel.related_id);
+            } else if (rel.type === 'spouse') {
+                person.marriages.push({ spouseId: rel.related_id });
+            }
+        });
+        familyData = Array.from(personMap.values());
+    } catch (error) {
+        console.error('Error loading family data:', error);
+    }
 }
 
 // --- Replace initial data load ---

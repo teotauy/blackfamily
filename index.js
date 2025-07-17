@@ -106,6 +106,14 @@ app.post('/api/register', async (req, res) => {
   const hash = await bcrypt.hash(password, 10);
   db.run('INSERT INTO users (email, password_hash) VALUES (?, ?)', [email, hash], function(err) {
     if (err) return res.status(400).json({ error: 'Email already exists' });
+    
+    // Send notification email to admin
+    console.log(`\n🔔 NEW ACCOUNT REQUEST`);
+    console.log(`Email: ${email}`);
+    console.log(`Time: ${new Date().toLocaleString()}`);
+    console.log(`Action needed: Login as admin to approve this user at your app URL`);
+    console.log(`Admin email: colby@colbyangusblack.com - Please check your family tree app to approve this user.\n`);
+    
     res.json({ message: 'Registration successful, pending admin approval.' });
   });
 });
@@ -183,7 +191,7 @@ app.get('/api/people/:id', (req, res) => {
 });
 
 // Add a new person
-app.post('/api/people', (req, res) => {
+app.post('/api/people', treeAuth, (req, res) => {
   const p = req.body;
   db.run(`INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -195,7 +203,7 @@ app.post('/api/people', (req, res) => {
 });
 
 // Update a person
-app.put('/api/people/:id', (req, res) => {
+app.put('/api/people/:id', treeAuth, (req, res) => {
   const id = req.params.id;
   const p = req.body;
   db.run(`UPDATE people SET name=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=? WHERE id=?`,
@@ -207,7 +215,7 @@ app.put('/api/people/:id', (req, res) => {
 });
 
 // Delete a person (and their relationships)
-app.delete('/api/people/:id', (req, res) => {
+app.delete('/api/people/:id', treeAuth, (req, res) => {
   const id = req.params.id;
   db.run('DELETE FROM relationships WHERE person_id = ? OR related_id = ?', [id, id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
@@ -219,7 +227,7 @@ app.delete('/api/people/:id', (req, res) => {
 });
 
 // Get all relationships
-app.get('/api/relationships', (req, res) => {
+app.get('/api/relationships', treeAuth, (req, res) => {
   db.all('SELECT * FROM relationships', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
@@ -227,7 +235,7 @@ app.get('/api/relationships', (req, res) => {
 });
 
 // Add a relationship
-app.post('/api/relationships', (req, res) => {
+app.post('/api/relationships', treeAuth, (req, res) => {
   const { person_id, related_id, type } = req.body;
   db.run('INSERT INTO relationships (person_id, related_id, type) VALUES (?, ?, ?)', [person_id, related_id, type], function(err) {
     if (err) return res.status(500).json({ error: err.message });
@@ -236,7 +244,7 @@ app.post('/api/relationships', (req, res) => {
 });
 
 // Delete a relationship
-app.delete('/api/relationships/:id', (req, res) => {
+app.delete('/api/relationships/:id', treeAuth, (req, res) => {
   const id = req.params.id;
   db.run('DELETE FROM relationships WHERE id = ?', [id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
