@@ -95,9 +95,31 @@ function logout() {
 function updateUIForAuth() {
   const isLoggedIn = !!authToken;
   const isAdmin = currentUser?.is_admin;
+  const headerAuthSection = document.getElementById('header-auth-section');
   
-  // Show/hide logout button
-  document.getElementById('logout-btn').style.display = isLoggedIn ? 'block' : 'none';
+  // Update header auth section
+  if (isLoggedIn) {
+    headerAuthSection.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="color: #666; font-size: 14px;">Welcome, ${currentUser?.email || 'User'}!</span>
+        <button id="logout-btn" style="padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Logout</button>
+        ${isAdmin ? '<button id="admin-btn" style="padding: 8px 16px; background: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">👑 Admin</button>' : ''}
+      </div>
+    `;
+    
+    // Re-attach event listeners
+    document.getElementById('logout-btn').onclick = logout;
+    if (isAdmin) {
+      document.getElementById('admin-btn').onclick = showAdminDashboard;
+    }
+  } else {
+    headerAuthSection.innerHTML = `
+      <button id="header-login-btn" style="padding: 12px 24px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">🔐 Login to Family Tree</button>
+    `;
+    
+    // Attach login button event
+    document.getElementById('header-login-btn').onclick = showAuthModal;
+  }
   
   // Show/hide main app content
   const mainContent = document.querySelector('main');
@@ -110,25 +132,30 @@ function updateUIForAuth() {
     actionsToolbar.style.display = 'block';
     searchSection.style.display = 'block';
     relationshipFinder.style.display = 'block';
-    
-    // Add admin button if admin
-    if (isAdmin && !document.getElementById('admin-btn')) {
-      const adminBtn = document.createElement('button');
-      adminBtn.id = 'admin-btn';
-      adminBtn.textContent = '👑 Admin';
-      adminBtn.style.cssText = 'position:fixed; top:10px; right:80px; z-index:1000;';
-      adminBtn.onclick = showAdminDashboard;
-      document.body.appendChild(adminBtn);
-    }
   } else {
     mainContent.style.display = 'none';
     actionsToolbar.style.display = 'none';
     searchSection.style.display = 'none';
     relationshipFinder.style.display = 'none';
     
-    // Remove admin button
-    const adminBtn = document.getElementById('admin-btn');
-    if (adminBtn) adminBtn.remove();
+    // Show a message indicating login is required
+    if (!document.getElementById('login-required-message')) {
+      const loginMessage = document.createElement('div');
+      loginMessage.id = 'login-required-message';
+      loginMessage.style.cssText = 'text-align: center; padding: 60px 20px; background: #f8f9fa; border-radius: 12px; margin: 40px auto; max-width: 600px;';
+      loginMessage.innerHTML = `
+        <h2 style="color: #2c3e50; margin-bottom: 20px;">🌳 Welcome to the Family Tree</h2>
+        <p style="color: #7f8c8d; font-size: 18px; margin-bottom: 30px;">Please log in to view and manage your family data.</p>
+        <button onclick="showAuthModal()" style="padding: 15px 30px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold;">🔐 Login to Get Started</button>
+      `;
+      document.body.appendChild(loginMessage);
+    }
+  }
+  
+  // Remove login message if logged in
+  if (isLoggedIn) {
+    const loginMessage = document.getElementById('login-required-message');
+    if (loginMessage) loginMessage.remove();
   }
 }
 

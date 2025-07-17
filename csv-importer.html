@@ -1036,7 +1036,16 @@
                         successCount++;
                     }
 
-                    alert(`🎉 Successfully imported ${successCount} family members to your family tree!`);
+                    // Show success state in the UI
+                    const copySection = document.getElementById('copySection');
+                    copySection.innerHTML = `
+                        <div style="text-align: center; padding: 40px; background: #d5f4e6; border: 2px solid #27ae60; border-radius: 12px;">
+                            <h3 style="color: #27ae60; margin-bottom: 20px;">🎉 Import Successful!</h3>
+                            <p style="font-size: 18px; margin-bottom: 15px;">Successfully imported <strong>${successCount}</strong> family members to your family tree!</p>
+                            <p style="color: #666; margin-bottom: 20px;">The family tree has been updated with the new data.</p>
+                            <button onclick="window.close()" style="background: #27ae60; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer;">Close Window</button>
+                        </div>
+                    `;
                     
                     // Try to refresh the parent window if it exists
                     if (window.opener && window.opener.location) {
