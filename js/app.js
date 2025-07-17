@@ -304,6 +304,29 @@ async function deleteRelationshipAPI(relId) {
     await apiCall(`/relationships/${relId}`, { method: 'DELETE' });
 }
 
+async function deletePerson(personId) {
+    const person = familyData.find(p => p.id === personId);
+    if (!person) return;
+    
+    if (confirm(`Are you sure you want to delete ${person.name}? This will also delete all their relationships and cannot be undone.`)) {
+        try {
+            await deletePersonAPI(personId);
+            alert(`${person.name} has been deleted successfully.`);
+            
+            // Reload data and refresh UI
+            await loadFamilyDataFromAPI();
+            renderFamilyTree();
+            renderUpcomingBirthdays();
+            
+            // Clear person info panel
+            document.getElementById('person-info').innerHTML = '<p>Select a person from the tree to view details.</p>';
+        } catch (error) {
+            console.error('Error deleting person:', error);
+            alert('Failed to delete person. Please try again.');
+        }
+    }
+}
+
 // --- Existing code ...
 
 // Function to calculate the "Next Birthday" fact
@@ -504,6 +527,13 @@ function setupAppEventListeners() {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }, 100);
+        });
+    }
+    
+    const csvImportBtn = document.getElementById('csv-import-btn');
+    if (csvImportBtn) {
+        csvImportBtn.addEventListener('click', () => {
+            window.open('csv-importer.html', '_blank');
         });
     }
 }
@@ -779,6 +809,7 @@ function displayPersonDetails(personId) {
         // if (person.children) { ... }
 
         detailsHTML += `<button id="edit-relationships-btn" style="margin-top:10px;">Edit Relationships</button>`;
+        detailsHTML += `<button id="delete-person-btn" style="margin-top:10px; margin-left:10px; background-color:#e74c3c; color:white;">Delete Person</button>`;
 
         personInfoDiv.innerHTML = detailsHTML;
 
@@ -795,6 +826,11 @@ function displayPersonDetails(personId) {
         // Attach event listener for Edit Relationships
         document.getElementById('edit-relationships-btn').onclick = function() {
             showEditRelationshipsModal(personId);
+        };
+        
+        // Attach event listener for Delete Person
+        document.getElementById('delete-person-btn').onclick = function() {
+            deletePerson(personId);
         };
     } else {
         personInfoDiv.innerHTML = '<p>Person not found.</p>';
