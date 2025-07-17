@@ -87,7 +87,14 @@ async function register(email, password) {
 function logout() {
   authToken = null;
   currentUser = null;
+  familyData = []; // Clear cached family data
   localStorage.removeItem('authToken');
+  
+  // Clear any displayed content
+  document.getElementById('person-info').innerHTML = '<p>Select a person from the tree to see their details.</p>';
+  document.getElementById('tree-container').innerHTML = '<h2>Family Tree Visualization</h2>';
+  document.getElementById('birthdays-list').innerHTML = '<li>No birthdays soon.</li>';
+  
   updateUIForAuth();
   showAuthModal();
 }
@@ -227,12 +234,25 @@ async function apiCall(endpoint, options = {}) {
     }
   };
   
-  const response = await fetch(url, config);
-  if (response.status === 401) {
-    logout();
-    return null;
+  try {
+    const response = await fetch(url, config);
+    if (response.status === 401) {
+      console.log('Authentication failed, logging out...');
+      logout();
+      return null;
+    }
+    if (!response.ok) {
+      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+    }
+    return response;
+  } catch (error) {
+    console.error(`API call to ${endpoint} failed:`, error);
+    // If it's a network error and we have a token, it might be invalid
+    if (authToken && error.message.includes('fetch')) {
+      logout();
+    }
+    throw error;
   }
-  return response;
 }
 
 // --- Load data from backend on page load ---
@@ -276,25 +296,32 @@ async function loadFamilyDataFromAPI() {
 
 // --- Replace initial data load ---
 document.addEventListener('DOMContentLoaded', async () => {
+    // Always update UI first to show correct initial state
+    updateUIForAuth();
+    
     // Check if user is already logged in
     if (authToken) {
-        // Try to load data - if it fails, user will be logged out
-        await loadFamilyDataFromAPI();
-        if (familyData.length > 0 || authToken) { // If we have data or still have token
-            renderFamilyTree();
-            renderUpcomingBirthdays();
+        try {
+            // Try to load data - if it fails, user will be logged out automatically
+            await loadFamilyDataFromAPI();
+            if (familyData.length > 0) {
+                renderFamilyTree();
+                renderUpcomingBirthdays();
+                setupAppEventListeners(); // Setup all app functionality after successful auth
+            }
+            // Update UI again after successful data load
             updateUIForAuth();
+        } catch (error) {
+            console.error('Failed to load initial data:', error);
+            // If loading fails, the apiCall function will handle logout
         }
     } else {
-        // Show login modal
+        // Show login modal if no token
         showAuthModal();
     }
     
     // Setup auth event listeners
     setupAuthEventListeners();
-    
-    // ... existing code ...
-    // Remove export button logic
 });
 
 // --- Replace add/edit/delete person/relationship logic with API calls ---
