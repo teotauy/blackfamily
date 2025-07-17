@@ -14,12 +14,25 @@ async function clearAllData() {
   return new Promise((resolve, reject) => {
     console.log('🧹 Starting database cleanup...\n');
     
-    // First, show current stats
-    db.get('SELECT COUNT(*) as people_count FROM people', [], (err, peopleResult) => {
+    // First check if tables exist
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='people'", [], (err, tableExists) => {
       if (err) {
-        console.error('Error getting people count:', err);
+        console.error('Error checking table existence:', err);
         return reject(err);
       }
+      
+      if (!tableExists) {
+        console.log('⚠️  Tables don\'t exist yet. Database is already clean!');
+        console.log('💡 Run the server first to create tables: cd backend && node server.js');
+        return resolve();
+      }
+      
+      // Show current stats
+      db.get('SELECT COUNT(*) as people_count FROM people', [], (err, peopleResult) => {
+        if (err) {
+          console.error('Error getting people count:', err);
+          return reject(err);
+        }
       
       db.get('SELECT COUNT(*) as relationships_count FROM relationships', [], (err, relResult) => {
         if (err) {
