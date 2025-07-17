@@ -372,8 +372,10 @@ async function deletePerson(personId) {
             renderFamilyTree();
             renderUpcomingBirthdays();
             
-            // Clear person info panel
-            document.getElementById('person-info').innerHTML = '<p>Select a person from the tree to view details.</p>';
+            // Clear person info panel and remove selection styling
+            const detailsContainer = document.getElementById('details-container');
+            detailsContainer.classList.remove('person-selected');
+            document.getElementById('person-info').innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #666;"><h3>👤 No Person Selected</h3><p>Click on anyone in the family tree to see their details here.</p></div>';
         } catch (error) {
             console.error('Error deleting person:', error);
             alert('Failed to delete person. Please try again.');
@@ -781,17 +783,26 @@ function displayPersonDetails(personId) {
         previouslyHighlighted.classList.remove('tree-node-highlighted');
     }
 
+    // Add visual feedback to details container
+    const detailsContainer = document.getElementById('details-container');
+    detailsContainer.classList.add('person-selected');
+    
+    // Scroll details container into view on mobile/smaller screens
+    detailsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+
     const person = familyData.find(p => p.id === personId);
     const personInfoDiv = document.getElementById('person-info');
 
     if (person) {
         let detailsHTML = "";
+        // Add a prominent "SELECTED" indicator
+        detailsHTML += `<div style="background: linear-gradient(45deg, #007bff, #0056b3); color: white; padding: 8px 12px; border-radius: 6px; text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 14px;">👤 PERSON SELECTED</div>`;
         // Profile Picture (with default)
         detailsHTML += `<img src="${person.profilePic || defaultProfilePic}" alt="Profile picture of ${person.nickname || person.name}" class="profile-pic-details">`;
         // Main heading: nickname (or name), deceased label
         let mainHeading = person.nickname || person.name;
         if (person.deathDate) mainHeading += ' ⚰️';
-        detailsHTML += `<h3>${mainHeading}</h3>`;
+        detailsHTML += `<h3 style="color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 8px;">${mainHeading}</h3>`;
         // Pronouns
         if (person.pronouns) detailsHTML += `<div><strong>Pronouns:</strong> ${person.pronouns}</div>`;
         // Middle name
@@ -887,6 +898,7 @@ function displayPersonDetails(personId) {
             deletePerson(personId);
         };
     } else {
+        detailsContainer.classList.remove('person-selected');
         personInfoDiv.innerHTML = '<p>Person not found.</p>';
     }
 }

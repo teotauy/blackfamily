@@ -31,11 +31,20 @@ main {
 
 #details-container {
     flex: 1;
-    min-width: 250px;
+    min-width: 300px;
+    max-width: 400px;
     background-color: #fff;
     padding: 1em;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border: 2px solid #e0e0e0;
+    transition: all 0.3s ease;
+}
+
+#details-container.person-selected {
+    border-color: #007bff;
+    box-shadow: 0 0 20px rgba(0,123,255,0.3);
+    background-color: #f8f9ff;
 }
 
 #birthdays-container {
