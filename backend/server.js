@@ -8,17 +8,17 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
-// Email notification setup (using nodemailer)
-const nodemailer = require('nodemailer');
+// Email notification setup (using nodemailer) - temporarily disabled
+// const nodemailer = require('nodemailer');
 
-// Create transporter for email notifications
-const transporter = nodemailer.createTransporter({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER || 'your-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'your-app-password'
-  }
-});
+// Create transporter for email notifications - temporarily disabled
+// const transporter = nodemailer.createTransporter({
+//   service: 'gmail',
+//   auth: {
+//     user: process.env.EMAIL_USER || 'your-email@gmail.com',
+//     pass: process.env.EMAIL_PASS || 'your-app-password'
+//   }
+// });
 
 // Admin configuration (will be set during setup)
 let adminConfig = {
@@ -34,8 +34,11 @@ function isAdminSetup() {
   return adminConfig.email !== '';
 }
 
-// Function to send notification email
+// Function to send notification email - temporarily disabled
 async function sendNewUserNotification(userEmail) {
+  console.log('Email notification disabled - would send to admin for:', userEmail);
+  // Temporarily disabled to fix deployment
+  /*
   const adminEmail = adminConfig.email || process.env.ADMIN_EMAIL || 'admin@familytree.com';
   
   const mailOptions = {
@@ -60,6 +63,7 @@ async function sendNewUserNotification(userEmail) {
   } catch (error) {
     console.error('Failed to send notification email:', error);
   }
+  */
 }
 
 // CORS configuration for production
