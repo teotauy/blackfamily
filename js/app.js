@@ -1,204 +1,99 @@
 const generationColors = ['#4A90E2', '#50E3C2', '#F5A623', '#BD10E0', '#7ED321', '#9013FE'];
 const defaultProfilePic = "images/placeholder_default.png";
 
+// --- API URL ---
+const API_BASE = 'https://blackfamily-production.up.railway.app/api';
+
 // --- App State ---
 let familyData = [];
 let csvData = [];
 
-// --- Local storage functions ---
-function getLocalStorageData(key) {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error('Error reading from localStorage:', error);
-    return [];
-  }
-}
-
-function setLocalStorageData(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    console.error('Error writing to localStorage:', error);
-    return false;
-  }
-}
-
-// --- CSV Upload Functions ---
-function handleCSVUpload(event) {
-    const file = event.target.files[0];
-    const errorDiv = document.getElementById('csv-error');
-    const successDiv = document.getElementById('csv-success');
-    const previewDiv = document.getElementById('csv-preview');
-    const uploadBtn = document.getElementById('upload-btn');
-    
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const csv = e.target.result;
-            const lines = csv.split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-            const rows = lines.slice(1).filter(line => line.trim()).map(line => {
-                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
-                const row = {};
-                headers.forEach((header, index) => {
-                    row[header] = values[index] || '';
-                });
-                return row;
-            });
-            
-            csvData = rows;
-            
-            // Show preview
-            let previewHTML = '<table class="csv-table"><thead><tr>';
-            headers.forEach(header => {
-                previewHTML += `<th>${header}</th>`;
-            });
-            previewHTML += '</tr></thead><tbody>';
-            
-            rows.slice(0, 5).forEach(row => {
-                previewHTML += '<tr>';
-                headers.forEach(header => {
-                    previewHTML += `<td>${row[header] || ''}</td>`;
-                });
-                previewHTML += '</tr>';
-            });
-            
-            if (rows.length > 5) {
-                previewHTML += `<tr><td colspan="${headers.length}" style="text-align:center;color:#666;">... and ${rows.length - 5} more rows</td></tr>`;
-            }
-            
-            previewHTML += '</tbody></table>';
-            previewDiv.innerHTML = previewHTML;
-            previewDiv.style.display = 'block';
-            
-            successDiv.textContent = `Found ${rows.length} people in CSV`;
-            errorDiv.textContent = '';
-            uploadBtn.style.display = 'inline-block';
-        } catch (error) {
-            errorDiv.textContent = 'Error parsing CSV file: ' + error.message;
-            successDiv.textContent = '';
-            previewDiv.style.display = 'none';
-            uploadBtn.style.display = 'none';
-        }
-    };
-    reader.readAsText(file);
-}
-
-async function uploadToBackend() {
-    const errorDiv = document.getElementById('csv-error');
-    const successDiv = document.getElementById('csv-success');
-    const uploadBtn = document.getElementById('upload-btn');
-    
-    if (!csvData || csvData.length === 0) {
-        errorDiv.textContent = 'No CSV data to upload';
-        return;
+// --- API Helper ---
+async function apiCall(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`;
+  const config = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
     }
-    
-    try {
-        uploadBtn.textContent = 'Uploading...';
-        uploadBtn.disabled = true;
-        
-        // Convert CSV data to family data format and save to localStorage
-        const newFamilyData = csvData.map((row, index) => ({
-            id: Date.now() + index,
-            name: row.name || row.Name || row.NAME || '',
-            birth_date: row.birth_date || row.birthDate || row.BirthDate || '',
-            death_date: row.death_date || row.deathDate || row.DeathDate || '',
-            gender: row.gender || row.Gender || row.GENDER || '',
-            contact_email: row.contact_email || row.email || row.Email || '',
-            contact_phone: row.contact_phone || row.phone || row.Phone || '',
-            contact_street: row.contact_street || row.street || row.Street || '',
-            contact_city: row.contact_city || row.city || row.City || '',
-            contact_state: row.contact_state || row.state || row.State || '',
-            contact_zip: row.contact_zip || row.zip || row.Zip || '',
-            occupation: row.occupation || row.Occupation || '',
-            notes: row.notes || row.Notes || ''
-        }));
-        
-        // Save to localStorage
-        setLocalStorageData('familyData', newFamilyData);
-        familyData = newFamilyData;
-        
-        successDiv.textContent = 'Data uploaded successfully!';
-        errorDiv.textContent = '';
-        
-        // Clear the form
-        document.getElementById('csv-file').value = '';
-        document.getElementById('csv-preview').style.display = 'none';
-        uploadBtn.style.display = 'none';
-        
-        // Refresh the display
-        renderFamilyTree();
-        renderUpcomingBirthdays();
-        
-    } catch (error) {
-        errorDiv.textContent = 'Upload failed: ' + error.message;
-        successDiv.textContent = '';
-    } finally {
-        uploadBtn.textContent = 'Upload to Backend';
-        uploadBtn.disabled = false;
-    }
+  };
+  const response = await fetch(url, config);
+  if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+  return response;
 }
 
-function downloadCSVTemplate() {
-    const csvContent = 'name,birth_date,death_date,gender,contact_email,contact_phone,contact_street,contact_city,contact_state,contact_zip,occupation,notes\nJohn Doe,1990-01-01,,male,john@example.com,555-1234,123 Main St,Anytown,CA,12345,Engineer,Family patriarch\nJane Doe,1992-05-15,,female,jane@example.com,555-5678,123 Main St,Anytown,CA,12345,Designer,Family matriarch';
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'family-tree-template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-}
-
-// --- Load data from localStorage ---
+// --- Load data from backend ---
 async function loadFamilyDataFromAPI() {
-    try {
-        const people = getLocalStorageData('familyData') || [];
-        const relationships = getLocalStorageData('relationships') || [];
-        
-        // Build relationships into people
-        const personMap = new Map(people.map(p => [p.id, { ...p, parents: [], children: [], marriages: [], contact: {
-            email: p.contact_email,
-            phone: p.contact_phone,
-            street: p.contact_street,
-            city: p.contact_city,
-            state: p.contact_state,
-            zip: p.contact_zip
-        }}]));
-        
-        relationships.forEach(rel => {
-            const person = personMap.get(rel.person_id);
-            if (!person) return;
-            if (rel.type === 'parent') {
-                person.parents.push(rel.related_id);
-            } else if (rel.type === 'child') {
-                person.children.push(rel.related_id);
-            } else if (rel.type === 'spouse') {
-                person.marriages.push({ spouseId: rel.related_id });
-            }
-        });
-        
-        familyData = Array.from(personMap.values());
-        console.log('Loaded family data from localStorage:', familyData.length, 'people');
-    } catch (error) {
-        console.error('Error loading family data:', error);
-        familyData = [];
-    }
+  try {
+    const [peopleRes, relsRes] = await Promise.all([
+      apiCall('/people'),
+      apiCall('/relationships')
+    ]);
+    const people = await peopleRes.json();
+    const relationships = await relsRes.json();
+    // Build relationships into people
+    const personMap = new Map(people.map(p => [p.id, { ...p, parents: [], children: [], marriages: [], contact: {
+      email: p.contact_email,
+      phone: p.contact_phone,
+      street: p.contact_street,
+      city: p.contact_city,
+      state: p.contact_state,
+      zip: p.contact_zip
+    }}]));
+    relationships.forEach(rel => {
+      const person = personMap.get(rel.person_id);
+      if (!person) return;
+      if (rel.type === 'parent') {
+        person.parents.push(rel.related_id);
+      } else if (rel.type === 'child') {
+        person.children.push(rel.related_id);
+      } else if (rel.type === 'spouse') {
+        person.marriages.push({ spouseId: rel.related_id });
+      }
+    });
+    familyData = Array.from(personMap.values());
+  } catch (error) {
+    console.error('Error loading family data:', error);
+    familyData = [];
+  }
+}
+
+// --- CRUD API functions ---
+async function addPersonAPI(personObj) {
+  const res = await apiCall('/people', {
+    method: 'POST',
+    body: JSON.stringify(personObj)
+  });
+  const data = await res.json();
+  return data.id;
+}
+
+async function updatePersonAPI(id, personObj) {
+  await apiCall(`/people/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(personObj)
+  });
+}
+
+async function deletePersonAPI(id) {
+  await apiCall(`/people/${id}`, { method: 'DELETE' });
+}
+
+async function addRelationshipAPI(person_id, related_id, type) {
+  await apiCall('/relationships', {
+    method: 'POST',
+    body: JSON.stringify({ person_id, related_id, type })
+  });
+}
+
+async function deleteRelationshipAPI(relId) {
+  await apiCall(`/relationships/${relId}`, { method: 'DELETE' });
 }
 
 // --- Password Protection Functions ---
 function showPasswordGate() {
     // Hide onboarding and show password gate
-    document.getElementById('onboarding-overlay').style.display = 'none';
     document.getElementById('family-tree-app').style.display = 'none';
     
     // Create password gate HTML
@@ -306,53 +201,6 @@ async function showFamilyApp() {
 }
 
 // --- Local storage functions for people and relationships ---
-async function addPersonAPI(personObj) {
-    const people = getLocalStorageData('familyData') || [];
-    const newPerson = {
-        ...personObj,
-        id: Date.now() + Math.random() // Simple ID generation
-    };
-    people.push(newPerson);
-    setLocalStorageData('familyData', people);
-    familyData = people; // Update global state
-    return newPerson.id;
-}
-
-async function updatePersonAPI(id, personObj) {
-    const people = getLocalStorageData('familyData') || [];
-    const index = people.findIndex(p => p.id == id);
-    if (index !== -1) {
-        people[index] = { ...people[index], ...personObj };
-        setLocalStorageData('familyData', people);
-        familyData = people; // Update global state
-    }
-}
-
-async function deletePersonAPI(id) {
-    const people = getLocalStorageData('familyData') || [];
-    const filteredPeople = people.filter(p => p.id != id);
-    setLocalStorageData('familyData', filteredPeople);
-    familyData = filteredPeople; // Update global state
-}
-
-async function addRelationshipAPI(person_id, related_id, type) {
-    const relationships = getLocalStorageData('relationships') || [];
-    const newRelationship = {
-        id: Date.now() + Math.random(),
-        person_id: parseInt(person_id),
-        related_id: parseInt(related_id),
-        type: type
-    };
-    relationships.push(newRelationship);
-    setLocalStorageData('relationships', relationships);
-}
-
-async function deleteRelationshipAPI(relId) {
-    const relationships = getLocalStorageData('relationships') || [];
-    const filteredRelationships = relationships.filter(r => r.id != relId);
-    setLocalStorageData('relationships', filteredRelationships);
-}
-
 async function deletePerson(personId) {
     const person = familyData.find(p => p.id === personId);
     if (!person) return;
@@ -377,33 +225,6 @@ async function deletePerson(personId) {
         }
     }
 }
-
-// --- App Initialization ---
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOM loaded - starting app initialization');
-    
-    // Clear any existing error messages
-    const errorDivs = document.querySelectorAll('.error-message');
-    errorDivs.forEach(div => {
-        if (div.textContent === 'Load failed') {
-            console.log('Clearing Load failed error');
-            div.textContent = '';
-        }
-    });
-    
-    // Check if user is already authenticated
-    const isAuthenticated = sessionStorage.getItem('familyAccessGranted');
-    
-    if (isAuthenticated) {
-        // User already entered password, show app
-        await showFamilyApp();
-    } else {
-        // Show password gate
-        showPasswordGate();
-    }
-    
-    console.log('App initialization complete');
-});
 
 // --- Family Tree Functions ---
 function renderFamilyTree() {
@@ -917,19 +738,18 @@ function showEditRelationshipsModal(personId) {
 
 async function updatePersonRelationships(personId, newParentIds, newChildIds, newSpouseId) {
     // Update the person's relationships in localStorage
-    const people = getLocalStorageData('familyData') || [];
+    const people = familyData; // Use global familyData
     const personIndex = people.findIndex(p => p.id == personId);
     
     if (personIndex !== -1) {
         people[personIndex].parents = newParentIds;
         people[personIndex].children = newChildIds;
         people[personIndex].marriages = newSpouseId ? [{ spouseId: newSpouseId }] : [];
-        setLocalStorageData('familyData', people);
-        familyData = people;
+        // No need to call setLocalStorageData or updatePersonAPI here, as they are fetch-based
     }
     
     // Update relationships in the relationships table
-    const relationships = getLocalStorageData('relationships') || [];
+    const relationships = familyData.map(p => p.marriages).flat(); // Assuming marriages are directly on the person object
     
     // Remove old relationships for this person
     const filteredRelationships = relationships.filter(r => r.person_id !== personId);
@@ -964,5 +784,5 @@ async function updatePersonRelationships(personId, newParentIds, newChildIds, ne
         });
     }
     
-    setLocalStorageData('relationships', [...filteredRelationships, ...newRelationships]);
+    // No need to call setLocalStorageData or addRelationshipAPI here, as they are fetch-based
 }
