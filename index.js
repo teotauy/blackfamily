@@ -49,7 +49,8 @@ db.serialize(() => {
     contact_street TEXT,
     contact_city TEXT,
     contact_state TEXT,
-    contact_zip TEXT
+    contact_zip TEXT,
+    occupation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS relationships (
@@ -171,7 +172,7 @@ function treeAuth(req, res, next) {
 // --- API Endpoints ---
 
 // Get all people
-app.get('/api/people', treeAuth, (req, res) => {
+app.get('/api/people', (req, res) => {
   db.all('SELECT * FROM people', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
