@@ -473,6 +473,41 @@ app.delete('/api/people/:id', (req, res) => {
   });
 });
 
+// Bulk import endpoint for CSV upload
+app.post('/api/people/bulk', (req, res) => {
+  const people = req.body;
+  if (!Array.isArray(people)) {
+    return res.status(400).json({ error: 'Expected an array of people' });
+  }
+  const placeholders = people.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+  const values = [];
+  people.forEach(p => {
+    values.push(
+      p.name || '',
+      p.birth_date || '',
+      p.death_date || '',
+      p.pronouns || '',
+      p.bio || '',
+      p.notes || '',
+      p.contact_email || '',
+      p.contact_phone || '',
+      p.contact_street || '',
+      p.contact_city || '',
+      p.contact_state || '',
+      p.contact_zip || '',
+      p.occupation || ''
+    );
+  });
+  const sql = `INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, occupation) VALUES ${placeholders}`;
+  db.run(sql, values, function(err) {
+    if (err) {
+      console.error('Bulk insert error:', err);
+      return res.status(500).json({ error: 'Failed to insert people' });
+    }
+    res.json({ message: 'People imported', count: people.length });
+  });
+});
+
 // Get all relationships
 app.get('/api/relationships', (req, res) => {
   db.all('SELECT * FROM relationships', [], (err, rows) => {
