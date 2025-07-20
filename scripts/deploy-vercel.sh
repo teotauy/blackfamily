@@ -21,7 +21,6 @@ fi
 
 # Deploy to Vercel
 echo "📦 Deploying frontend..."
-cd "untitled folder"
 vercel --prod
 
 echo "✅ Frontend deployed! Check Vercel dashboard for the URL." 
