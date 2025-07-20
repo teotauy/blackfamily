@@ -83,14 +83,20 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
-    const email = document.getElementById('register-email').value;
+    const email = document.getElementById('register-email').value.trim();
     const password = document.getElementById('register-password').value;
     const confirmPassword = document.getElementById('register-confirm-password').value;
+    const termsConsent = document.getElementById('terms-consent').checked;
     const errorDiv = document.getElementById('register-error');
     const successDiv = document.getElementById('register-success');
     
     if (!email || !password || !confirmPassword) {
         errorDiv.textContent = 'Please fill in all fields';
+        return;
+    }
+    
+    if (!termsConsent) {
+        errorDiv.textContent = 'You must agree to the Terms of Service and Privacy Policy';
         return;
     }
     

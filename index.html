@@ -233,6 +233,16 @@
                         <input type="email" id="register-email" class="onboarding-input" placeholder="Email address" required>
                         <input type="password" id="register-password" class="onboarding-input" placeholder="Password (min 6 characters)" required>
                         <input type="password" id="register-confirm-password" class="onboarding-input" placeholder="Confirm password" required>
+                        
+                        <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
+                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+                                <input type="checkbox" id="terms-consent" style="margin-top: 2px;" required>
+                                <span>
+                                    I agree to the <a href="/terms-of-service.html" target="_blank" style="color: #3498db;">Terms of Service</a> and <a href="/privacy-policy.html" target="_blank" style="color: #3498db;">Privacy Policy</a>. I confirm that I have proper consent to store family member information.
+                                </span>
+                            </label>
+                        </div>
+                        
                         <div id="register-error" class="error-message"></div>
                         <div id="register-success" class="success-message"></div>
                         <button class="onboarding-button" onclick="handleRegister()">Create Account</button>
@@ -255,6 +265,16 @@
                 <p class="onboarding-subtitle">Upload a CSV file with your family members to get started quickly</p>
                 
                 <div class="onboarding-form">
+                    <!-- Data Protection Notice -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 10px; border-left: 4px solid #ffc107;">
+                        <h4 style="margin: 0 0 10px 0; color: #856404;">🔒 Data Protection Notice</h4>
+                        <p style="margin: 0; font-size: 14px; color: #856404;">
+                            <strong>Important:</strong> Before uploading family data, please ensure you have proper consent from all family members whose information you're adding. 
+                            This includes names, birth dates, contact information, and any other personal details. 
+                            You are responsible for complying with applicable privacy laws and respecting family members' privacy rights.
+                        </p>
+                    </div>
+                    
                     <!-- Download Template Button -->
                     <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
                         <h4 style="margin: 0 0 10px 0; color: #495057;">📋 Need a Template?</h4>
@@ -542,6 +562,14 @@
         <footer>
             <p>&copy; 2025 Sam Black's Family</p>
             <button id="csv-import-btn" style="margin-top: 10px; padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">📊 CSV Import</button>
+            
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center;">
+                <p style="color: #6c757d; font-size: 14px; margin-bottom: 10px;">Legal & Privacy</p>
+                <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                    <a href="/privacy-policy.html" style="color: #3498db; text-decoration: none; font-size: 14px;">🔒 Privacy Policy</a>
+                    <a href="/terms-of-service.html" style="color: #3498db; text-decoration: none; font-size: 14px;">📋 Terms of Service</a>
+                </div>
+            </div>
         </footer>
 
         <script src="js/data.js"></script>
