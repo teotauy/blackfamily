@@ -61,6 +61,13 @@ async function handleLogin() {
         return;
     }
     
+    // Temporarily skip backend call for testing
+    console.log('Login attempt:', email);
+    errorDiv.textContent = '';
+    nextStep();
+    
+    // Original code commented out for now
+    /*
     try {
         const response = await fetch(`${API_BASE}/login`, {
             method: 'POST',
@@ -80,6 +87,7 @@ async function handleLogin() {
     } catch (error) {
         errorDiv.textContent = error.message;
     }
+    */
 }
 
 async function handleRegister() {
@@ -110,6 +118,24 @@ async function handleRegister() {
         return;
     }
     
+    // Temporarily skip backend call for testing
+    console.log('Register attempt:', email);
+    errorDiv.textContent = '';
+    successDiv.textContent = 'Registration successful! (Backend disabled for testing)';
+    
+    // Clear form
+    document.getElementById('register-email').value = '';
+    document.getElementById('register-password').value = '';
+    document.getElementById('register-confirm-password').value = '';
+    
+    // Show login form after successful registration
+    setTimeout(() => {
+        showLoginForm();
+        successDiv.textContent = '';
+    }, 3000);
+    
+    // Original code commented out for now
+    /*
     try {
         const response = await fetch(`${API_BASE}/register`, {
             method: 'POST',
@@ -140,6 +166,7 @@ async function handleRegister() {
     } catch (error) {
         errorDiv.textContent = error.message;
     }
+    */
 }
 
 function handleCSVUpload(event) {
@@ -801,6 +828,8 @@ async function loadFamilyDataFromAPI() {
 
 // --- Replace initial data load ---
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM loaded - starting app initialization');
+    
     // For now, skip admin setup check to avoid backend errors
     // const adminSetup = await checkAdminSetup();
     // if (!adminSetup) {
@@ -833,6 +862,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Setup auth event listeners
     setupAuthEventListeners();
+    
+    console.log('App initialization complete');
 });
 
 // --- Replace add/edit/delete person/relationship logic with API calls ---
