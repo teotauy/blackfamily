@@ -506,6 +506,9 @@ async function showAdminDashboard() {
       badge.style.display = 'none';
     }
     
+    // Load database stats
+    refreshStats();
+    
     if (pendingUsers.length === 0) {
       list.innerHTML = `
         <li style="padding: 20px; text-align: center; color: #666; background: #f8f9fa; border-radius: 8px;">
@@ -618,6 +621,54 @@ async function checkPendingUsers() {
     }
   } catch (error) {
     console.error('Error checking pending users:', error);
+  }
+}
+
+async function refreshStats() {
+  try {
+    const response = await fetch(`${API_BASE}/admin/stats`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (response.ok) {
+      const stats = await response.json();
+      document.getElementById('people-count').textContent = stats.people;
+      document.getElementById('relationships-count').textContent = stats.relationships;
+      document.getElementById('users-count').textContent = stats.users;
+    }
+  } catch (error) {
+    console.error('Error refreshing stats:', error);
+  }
+}
+
+async function clearAllData() {
+  const confirmed = confirm('⚠️ WARNING: This will delete ALL people and relationships from the database!\n\nThis action cannot be undone. Are you sure you want to continue?');
+  
+  if (confirmed) {
+    try {
+      const response = await fetch(`${API_BASE}/admin/clear-data`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ ${result.message}\n\nPeople deleted: ${result.peopleDeleted}\nRelationships deleted: ${result.relationshipsDeleted}`);
+        
+        // Refresh stats
+        refreshStats();
+        
+        // Refresh the main app data
+        await loadFamilyDataFromAPI();
+        renderFamilyTree();
+        renderUpcomingBirthdays();
+      } else {
+        throw new Error('Failed to clear data');
+      }
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      alert('❌ Failed to clear data. Please try again.');
+    }
   }
 }
 

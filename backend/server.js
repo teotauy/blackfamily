@@ -347,6 +347,44 @@ app.get('/api/admin/config', (req, res) => {
   res.json(adminConfig);
 });
 
+// Get database stats
+app.get('/api/admin/stats', (req, res) => {
+  db.get('SELECT COUNT(*) as peopleCount FROM people', [], (err, peopleResult) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    db.get('SELECT COUNT(*) as relationshipsCount FROM relationships', [], (err2, relsResult) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      
+      db.get('SELECT COUNT(*) as usersCount FROM users', [], (err3, usersResult) => {
+        if (err3) return res.status(500).json({ error: err3.message });
+        
+        res.json({
+          people: peopleResult.peopleCount,
+          relationships: relsResult.relationshipsCount,
+          users: usersResult.usersCount
+        });
+      });
+    });
+  });
+});
+
+// Clear all data (admin only)
+app.post('/api/admin/clear-data', authRequired, adminRequired, (req, res) => {
+  db.run('DELETE FROM relationships', [], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    db.run('DELETE FROM people', [], function(err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      
+      res.json({ 
+        message: 'All data cleared successfully',
+        relationshipsDeleted: this.changes,
+        peopleDeleted: this.changes
+      });
+    });
+  });
+});
+
 // --- Get CSV Template ---
 app.get('/api/csv-template', (req, res) => {
   res.setHeader('Content-Type', 'text/csv');
