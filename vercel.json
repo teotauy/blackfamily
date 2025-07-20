@@ -1,24 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/admin-setup",
-      "destination": "/admin-setup.html"
-    },
-    {
-      "source": "/privacy-policy",
-      "destination": "/privacy-policy.html"
-    },
-    {
-      "source": "/terms-of-service",
-      "destination": "/terms-of-service.html"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "https://blackfamily-production.up.railway.app/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 } 
