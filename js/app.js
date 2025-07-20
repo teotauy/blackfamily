@@ -816,14 +816,120 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
-    // Skip authentication entirely - go straight to app
-    console.log('Skipping authentication - going straight to app');
+    // Check if user is already authenticated
+    const isAuthenticated = sessionStorage.getItem('familyAccessGranted');
+    
+    if (isAuthenticated) {
+        // User already entered password, show app
+        await showFamilyApp();
+    } else {
+        // Show password gate
+        showPasswordGate();
+    }
+    
+    console.log('App initialization complete');
+});
+
+// --- Password Protection Functions ---
+function showPasswordGate() {
+    // Hide onboarding and show password gate
+    document.getElementById('onboarding-overlay').style.display = 'none';
+    document.getElementById('family-tree-app').style.display = 'none';
+    
+    // Create password gate HTML
+    const passwordGateHTML = `
+        <div id="password-gate" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        ">
+            <div style="
+                background: white;
+                padding: 40px;
+                border-radius: 15px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                text-align: center;
+                max-width: 400px;
+                width: 90%;
+            ">
+                <h1 style="color: #333; margin-bottom: 10px; font-size: 28px;">👨‍👩‍👧‍👦 Family Tree</h1>
+                <p style="color: #666; margin-bottom: 30px; font-size: 16px;">Enter the family password to access the family tree and contact information</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <input type="password" id="family-password" placeholder="Enter family password" style="
+                        width: 100%;
+                        padding: 15px;
+                        border: 2px solid #e1e5e9;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        outline: none;
+                        transition: border-color 0.3s;
+                    " onkeypress="if(event.key==='Enter') checkFamilyPassword()">
+                </div>
+                
+                <button onclick="checkFamilyPassword()" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 15px 30px;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                    width: 100%;
+                " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    🔓 Access Family Tree
+                </button>
+                
+                <div id="password-error" style="
+                    color: #e74c3c;
+                    margin-top: 15px;
+                    font-size: 14px;
+                    display: none;
+                ">❌ Incorrect password. Please try again.</div>
+            </div>
+        </div>
+    `;
+    
+    // Add password gate to page
+    document.body.insertAdjacentHTML('beforeend', passwordGateHTML);
+}
+
+async function checkFamilyPassword() {
+    const password = document.getElementById('family-password').value;
+    const errorDiv = document.getElementById('password-error');
+    
+    // Set your family password here
+    const correctPassword = 'blackfamily2024'; // You can change this to whatever you want
+    
+    if (password === correctPassword) {
+        // Password correct - grant access
+        sessionStorage.setItem('familyAccessGranted', 'true');
+        document.getElementById('password-gate').remove();
+        await showFamilyApp();
+    } else {
+        // Password incorrect
+        errorDiv.style.display = 'block';
+        document.getElementById('family-password').value = '';
+        document.getElementById('family-password').focus();
+    }
+}
+
+async function showFamilyApp() {
+    console.log('Access granted - showing family app');
     
     // Load data from localStorage
     await loadFamilyDataFromAPI();
     
-    // Show the main app directly
-    document.getElementById('onboarding-overlay').style.display = 'none';
+    // Show the main app
     document.getElementById('family-tree-app').style.display = 'block';
     
     // Setup all app functionality
@@ -832,9 +938,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Render the family tree
     renderFamilyTree();
     renderUpcomingBirthdays();
-    
-    console.log('App initialization complete - no login required');
-});
+}
 
 // --- Local storage functions for people and relationships ---
 async function addPersonAPI(personObj) {
