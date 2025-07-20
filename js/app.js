@@ -1099,7 +1099,10 @@ function setupAppEventListeners() {
     const csvImportBtn = document.getElementById('csv-import-btn');
     if (csvImportBtn) {
         csvImportBtn.addEventListener('click', () => {
-            window.open('csv-importer.html', '_blank');
+            // Show the onboarding overlay with CSV upload step
+            document.getElementById('onboarding-overlay').style.display = 'block';
+            document.getElementById('family-tree-app').style.display = 'none';
+            showStep(3); // Go directly to CSV upload step
         });
     }
 }
