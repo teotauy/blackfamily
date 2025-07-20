@@ -803,6 +803,15 @@ async function loadFamilyDataFromAPI() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM loaded - starting app initialization');
     
+    // Clear any existing error messages
+    const errorDivs = document.querySelectorAll('.error-message');
+    errorDivs.forEach(div => {
+        if (div.textContent === 'Load failed') {
+            console.log('Clearing Load failed error');
+            div.textContent = '';
+        }
+    });
+    
     // For now, skip admin setup check to avoid backend errors
     // const adminSetup = await checkAdminSetup();
     // if (!adminSetup) {
