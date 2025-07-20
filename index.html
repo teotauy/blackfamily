@@ -1,4 +1,3 @@
-<!-- Trigger Vercel deployment: © change -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,636 +7,234 @@
     <link rel="stylesheet" href="css/style.css">
     <!-- jsPDF library for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <style>
-        /* Onboarding overlay styles */
-        #onboarding-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        
-        .onboarding-container {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 600px;
-            width: 90%;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        
-        .onboarding-step {
-            display: none;
-        }
-        
-        .onboarding-step.active {
-            display: block;
-        }
-        
-        .onboarding-title {
-            font-size: 2.5em;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-        
-        .onboarding-subtitle {
-            font-size: 1.2em;
-            color: #7f8c8d;
-            margin-bottom: 30px;
-        }
-        
-        .onboarding-form {
-            margin: 20px 0;
-        }
-        
-        .onboarding-input {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 16px;
-            margin: 10px 0;
-            box-sizing: border-box;
-        }
-        
-        .onboarding-input:focus {
-            border-color: #3498db;
-            outline: none;
-        }
-        
-        .onboarding-button {
-            background: #3498db;
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            margin: 10px;
-            transition: background 0.3s;
-        }
-        
-        .onboarding-button:hover {
-            background: #2980b9;
-        }
-        
-        .onboarding-button.secondary {
-            background: #95a5a6;
-        }
-        
-        .onboarding-button.secondary:hover {
-            background: #7f8c8d;
-        }
-        
-        .onboarding-button.success {
-            background: #27ae60;
-        }
-        
-        .onboarding-button.success:hover {
-            background: #229954;
-        }
-        
-        .onboarding-progress {
-            display: flex;
-            justify-content: center;
-            margin: 20px 0;
-        }
-        
-        .progress-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #e0e0e0;
-            margin: 0 5px;
-        }
-        
-        .progress-dot.active {
-            background: #3498db;
-        }
-        
-        .csv-preview {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        
-        .csv-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .csv-table th,
-        .csv-table td {
-            padding: 8px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        
-        .csv-table th {
-            background: #f5f5f5;
-        }
-        
-        .error-message {
-            color: #e74c3c;
-            margin: 10px 0;
-        }
-        
-        .success-message {
-            color: #27ae60;
-            margin: 10px 0;
-        }
-        
-        .skip-onboarding {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .skip-onboarding:hover {
-            background: rgba(255,255,255,0.3);
-        }
-    </style>
 </head>
 <body>
-    <!-- Onboarding Overlay -->
-    <div id="onboarding-overlay">
-        <button class="skip-onboarding" onclick="skipOnboarding()">Skip to App</button>
-        
-        <!-- Step 1: Welcome -->
-        <div class="onboarding-container">
-            <div class="onboarding-step active" id="step-1">
-                <h1 class="onboarding-title">🌳 Welcome to Family Tree</h1>
-                <p class="onboarding-subtitle">Build your family tree, discover relationships, and stay connected with your loved ones.</p>
-                
-                <div class="onboarding-progress">
-                    <div class="progress-dot active"></div>
-                    <div class="progress-dot"></div>
-                    <div class="progress-dot"></div>
-                    <div class="progress-dot"></div>
-                </div>
-                
-                <button class="onboarding-button" onclick="nextStep()">Get Started</button>
-            </div>
-            
-            <!-- Step 2: Login/Register -->
-            <div class="onboarding-step" id="step-2">
-                <h1 class="onboarding-title">🔐 Access Your Account</h1>
-                <p class="onboarding-subtitle">Login to your existing account or create a new one</p>
-                
-                <div class="onboarding-form">
-                    <div style="margin-bottom: 20px;">
-                        <button 
-                            onclick="showLoginForm()" 
-                            id="show-login-btn"
-                            style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; margin-right: 10px;"
-                        >
-                            Login
-                        </button>
-                        <button 
-                            onclick="showRegisterForm()" 
-                            id="show-register-btn"
-                            style="background: #95a5a6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;"
-                        >
-                            Create Account
-                        </button>
-                    </div>
-                    
-                    <!-- Login Form -->
-                    <div id="login-form" class="onboarding-form">
-                        <input type="email" id="login-email" class="onboarding-input" placeholder="Email address" required>
-                        <input type="password" id="login-password" class="onboarding-input" placeholder="Password" required>
-                        <div id="login-error" class="error-message"></div>
-                        <button class="onboarding-button" onclick="handleLogin()">Login</button>
-                    </div>
-                    
-                    <!-- Register Form -->
-                    <div id="register-form" class="onboarding-form" style="display: none;">
-                        <input type="email" id="register-email" class="onboarding-input" placeholder="Email address" required>
-                        <input type="password" id="register-password" class="onboarding-input" placeholder="Password (min 6 characters)" required>
-                        <input type="password" id="register-confirm-password" class="onboarding-input" placeholder="Confirm password" required>
-                        
-                        <div style="margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 14px;">
-                            <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
-                                <input type="checkbox" id="terms-consent" style="margin-top: 2px;" required>
-                                <span>
-                                    I agree to the <a href="/terms-of-service.html" target="_blank" style="color: #3498db;">Terms of Service</a> and <a href="/privacy-policy.html" target="_blank" style="color: #3498db;">Privacy Policy</a>. I confirm that I have proper consent to store family member information.
-                                </span>
-                            </label>
-                        </div>
-                        
-                        <div id="register-error" class="error-message"></div>
-                        <div id="register-success" class="success-message"></div>
-                        <button class="onboarding-button" onclick="handleRegister()">Create Account</button>
-                    </div>
-                </div>
-                
-                <div class="onboarding-progress">
-                    <div class="progress-dot"></div>
-                    <div class="progress-dot active"></div>
-                    <div class="progress-dot"></div>
-                    <div class="progress-dot"></div>
-                </div>
-                
-                <button class="onboarding-button secondary" onclick="prevStep()">Back</button>
-            </div>
-            
-            <!-- Step 3: CSV Upload -->
-            <div class="onboarding-step" id="step-3">
-                <h1 class="onboarding-title">📊 Import Your Family Data</h1>
-                <p class="onboarding-subtitle">Upload a CSV file with your family members to get started quickly</p>
-                
-                <div class="onboarding-form">
-                    <!-- Data Protection Notice -->
-                    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 10px; border-left: 4px solid #ffc107;">
-                        <h4 style="margin: 0 0 10px 0; color: #856404;">🔒 Data Protection Notice</h4>
-                        <p style="margin: 0; font-size: 14px; color: #856404;">
-                            <strong>Important:</strong> Before uploading family data, please ensure you have proper consent from all family members whose information you're adding. 
-                            This includes names, birth dates, contact information, and any other personal details. 
-                            You are responsible for complying with applicable privacy laws and respecting family members' privacy rights.
-                        </p>
-                    </div>
-                    
-                    <!-- Download Template Button -->
-                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
-                        <h4 style="margin: 0 0 10px 0; color: #495057;">📋 Need a Template?</h4>
-                        <p style="margin: 0 0 15px 0; color: #6c757d; font-size: 14px;">
-                            Download our CSV template with the correct headers and sample data to get started.
-                        </p>
-                        <button 
-                            onclick="downloadCSVTemplate()"
-                            style="background: #17a2b8; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
-                        >
-                            📥 Download CSV Template
-                        </button>
-                    </div>
-                    
-                    <input type="file" id="csv-file" accept=".csv" class="onboarding-input" onchange="handleCSVUpload(event)">
-                    <div id="csv-preview" class="csv-preview" style="display: none;"></div>
-                    <div id="csv-error" class="error-message"></div>
-                    <div id="csv-success" class="success-message"></div>
-                </div>
-                
-                <div class="onboarding-progress">
-                    <div class="progress-dot"></div>
-                    <div class="progress-dot"></div>
-                    <div class="progress-dot active"></div>
-                </div>
-                
-                <button class="onboarding-button success" id="upload-btn" onclick="uploadToBackend()" style="display: none;">Upload to Database</button>
-                <button class="onboarding-button" onclick="prevStep()">Back</button>
-            </div>
-            
-
-        </div>
-    </div>
-
-    <!-- Original Family Tree App (hidden initially) -->
+    <!-- Family Tree App (hidden initially, shown after password) -->
     <div id="family-tree-app" style="display: none;">
         <header>
             <h1>Family Tree</h1>
-            <div id="header-auth-section" style="position: absolute; top: 20px; right: 20px;">
-                <!-- Login/logout buttons will be shown here -->
-            </div>
         </header>
 
         <div id="actions-toolbar">
-            <button id="generate-holiday-card-pdf-button" type="button">Generate Holiday Card Mailing Labels (PDF)</button>
+            <button id="add-person-button" type="button">Add Person</button>
+            <button id="generate-holiday-card-pdf-button" type="button" style="margin-left: 10px;">Generate Holiday Card Mailing Labels (PDF)</button>
             <button id="generate-individual-labels-pdf-button" type="button" style="margin-left: 10px;">Generate Individual Mailing Labels</button>
             <button id="generate-birthday-list-pdf-button" type="button" style="margin-left: 10px;">Generate Birthday List (PDF)</button>
             <button id="family-text-blast-button" type="button" style="margin-left: 10px;">📱 Family Text Blast</button>
             <button id="family-email-blast-button" type="button" style="margin-left: 10px;">📧 Family Email Blast</button>
-            <!-- Placeholder for other global action buttons -->
         </div>
 
         <div id="search-section-container">
-            <input type="search" id="family-search-input" placeholder="Search family members...">
-            <div id="family-search-results" class="search-results-list"></div>
+            <input type="search" id="family-search" placeholder="Search family members...">
         </div>
 
         <div id="relationship-finder-container">
             <h2>Relationship Finder</h2>
-            <div class="person-selector-group">
-                <label for="person1-relationship-input">Person 1:</label>
-                <input type="text" id="person1-relationship-input" autocomplete="off" placeholder="Search for first person...">
-                <div id="person1-relationship-suggestions" class="autocomplete-suggestions"></div>
-                <div id="selected-person1-display" class="selected-item-display"></div> 
-                <input type="hidden" id="person1-relationship-id">
-            </div>
-            <div class="person-selector-group">
-                <label for="person2-relationship-input">Person 2:</label>
-                <input type="text" id="person2-relationship-input" autocomplete="off" placeholder="Search for second person...">
-                <div id="person2-relationship-suggestions" class="autocomplete-suggestions"></div>
-                <div id="selected-person2-display" class="selected-item-display"></div>
-                <input type="hidden" id="person2-relationship-id">
-            </div>
-            <button id="calculate-relationship-button" type="button">Calculate Relationship</button>
-            <div id="relationship-result-display">
-                <p>Select two people to see their relationship.</p>
-            </div>
+            <form id="relationship-form">
+                <div class="person-selector-group">
+                    <label for="person1-select">Person 1:</label>
+                    <select id="person1-select" required>
+                        <option value="">Select first person...</option>
+                    </select>
+                </div>
+                <div class="person-selector-group">
+                    <label for="person2-select">Person 2:</label>
+                    <select id="person2-select" required>
+                        <option value="">Select second person...</option>
+                    </select>
+                </div>
+                <button type="submit">Calculate Relationship</button>
+            </form>
+            <div id="relationship-result"></div>
         </div>
 
         <main>
-            <section id="tree-container">
+            <div id="tree-container">
                 <h2>Family Tree Visualization</h2>
-                <!-- Tree will be rendered here by JavaScript -->
-            </section>
+                <!-- Family tree will be rendered here -->
+            </div>
 
-            <aside id="details-container">
-                <h2>Person Details</h2>
+            <div id="details-container">
                 <div id="person-info">
-                    <!-- Selected person's details will be shown here -->
                     <div style="text-align: center; padding: 40px 20px; color: #666;">
                         <h3>👤 No Person Selected</h3>
                         <p>Click on anyone in the family tree to see their details here.</p>
                     </div>
                 </div>
-            </aside>
+            </div>
 
-            <section id="birthdays-container">
+            <div id="birthdays-section">
                 <h2>Upcoming Birthdays</h2>
                 <ul id="birthdays-list">
-                    <!-- Upcoming birthdays will be listed here -->
                     <li>No birthdays soon.</li>
                 </ul>
-            </section>
-
-            <!-- New section for Random Family Fact -->
-            <section id="random-fact-container">
-                <h2>Family Fact</h2>
-                <div id="random-fact-display">
-                    <p>Loading fact...</p>
-                </div>
-            </section>
-
-            <section id="add-person-container">
-                <h2>Add New Person</h2>
-                <form id="add-person-form">
-                    <fieldset>
-                        <legend>Basic Information</legend>
-                        <div>
-                            <label for="add-name">Full Name:</label>
-                            <input type="text" id="add-name" name="name" required>
-                        </div>
-                        <div>
-                            <label for="add-nickname">Nickname:</label>
-                            <input type="text" id="add-nickname" name="nickname" placeholder="Preferred name (used in tree)">
-                        </div>
-                        <div>
-                            <label for="add-middleName">Middle Name:</label>
-                            <input type="text" id="add-middleName" name="middleName">
-                        </div>
-                        <div>
-                            <label for="add-birthDate">Birth Date:</label>
-                            <input type="text" id="add-birthDate" name="birthDate" placeholder="YYYY-MM-DD or free text">
-                        </div>
-                        <div>
-                            <label for="add-pronouns">Pronouns:</label>
-                            <select id="add-pronouns" name="pronouns">
-                                <option value="">-- Select --</option>
-                                <option value="he/him">he/him</option>
-                                <option value="she/her">she/her</option>
-                                <option value="they/them">they/them</option>
-                                <option value="he/they">he/they</option>
-                                <option value="she/they">she/they</option>
-                                <option value="ze/zir">ze/zir</option>
-                                <option value="xe/xem">xe/xem</option>
-                                <option value="custom">Custom...</option>
-                            </select>
-                            <input type="text" id="add-pronouns-custom" name="pronounsCustom" placeholder="Enter custom pronouns" style="display:none; margin-top:5px;">
-                        </div>
-                        <div>
-                            <label for="add-deceased">
-                                <input type="checkbox" id="add-deceased" name="deceased">
-                                Deceased
-                            </label>
-                        </div>
-                        <div>
-                            <label for="add-deathDate">Death Date:</label>
-                            <input type="text" id="add-deathDate" name="deathDate" placeholder="YYYY-MM-DD or free text" disabled>
-                        </div>
-                        <div>
-                            <label for="add-placeOfBirth">Place of Birth:</label>
-                            <input type="text" id="add-placeOfBirth" name="placeOfBirth">
-                        </div>
-                        <div>
-                            <label for="add-placeOfDeath">Place of Death:</label>
-                            <input type="text" id="add-placeOfDeath" name="placeOfDeath">
-                        </div>
-                        <div>
-                            <label for="add-profilePic">Profile Picture:</label>
-                            <input type="file" id="add-profilePic" name="profilePic" accept="image/*">
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Relationships (Enter IDs, comma-separated)</legend>
-                        <div>
-                            <label for="add-parents-input">Parents:</label>
-                            <input type="text" id="add-parents-input" autocomplete="off" placeholder="Type to search for parents...">
-                            <div id="add-parents-suggestions" class="autocomplete-suggestions"></div>
-                            <div id="selected-parents-list" class="selected-items-list">
-                                <!-- Selected parents will be shown here -->
-                            </div>
-                            <!-- Hidden input to store actual parent IDs -->
-                            <input type="hidden" id="add-parents-ids" name="parents_ids">
-                        </div>
-                        <div>
-                            <label for="add-children-input">Children:</label>
-                            <input type="text" id="add-children-input" autocomplete="off" placeholder="Type to search for children...">
-                            <div id="add-children-suggestions" class="autocomplete-suggestions"></div>
-                            <div id="selected-children-list" class="selected-items-list">
-                                <!-- Selected children will be shown here -->
-                            </div>
-                            <input type="hidden" id="add-children-ids" name="children_ids">
-                        </div>
-                        <p><strong>Marriage (Simplified for initial entry):</strong></p>
-                        <div>
-                            <label for="add-spouse-input">Spouse:</label>
-                            <input type="text" id="add-spouse-input" autocomplete="off" placeholder="Type to search for spouse...">
-                            <div id="add-spouse-suggestions" class="autocomplete-suggestions"></div>
-                            <div id="selected-spouse-display" class="selected-items-list">
-                                <!-- Selected spouse will be shown here -->
-                            </div>
-                            <input type="hidden" id="add-spouse-id-hidden" name="spouse_id_hidden">
-                        </div>
-                        <div>
-                            <label for="add-weddingDate">Wedding Date:</label>
-                            <input type="text" id="add-weddingDate" name="weddingDate" placeholder="YYYY-MM-DD or free text">
-                        </div>
-                        <div>
-                            <label for="add-divorced">
-                                <input type="checkbox" id="add-divorced" name="divorced">
-                                Divorced
-                            </label>
-                        </div>
-                        <div>
-                            <label for="add-divorceDate">Divorce Date:</label>
-                            <input type="text" id="add-divorceDate" name="divorceDate" placeholder="YYYY-MM-DD or free text" disabled>
-                        </div>
-                        <div>
-                            <label for="add-weddingPlace">Wedding Place:</label>
-                            <input type="text" id="add-weddingPlace" name="weddingPlace">
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Contact Information</legend>
-                        <div>
-                            <label for="add-email">Email:</label>
-                            <input type="email" id="add-email" name="email">
-                        </div>
-                        <div>
-                            <label for="add-phone">Phone:</label>
-                            <input type="tel" id="add-phone" name="phone">
-                        </div>
-                        <div>
-                            <label for="add-can-receive-texts">
-                                <input type="checkbox" id="add-can-receive-texts" name="canReceiveTexts" checked>
-                                Can receive text messages
-                            </label>
-                        </div>
-                        <div>
-                            <label for="add-street">Street:</label>
-                            <input type="text" id="add-street" name="street">
-                        </div>
-                        <div>
-                            <label for="add-city">City:</label>
-                            <input type="text" id="add-city" name="city">
-                        </div>
-                        <div>
-                            <label for="add-state">State:</label>
-                            <input type="text" id="add-state" name="state">
-                        </div>
-                        <div>
-                            <label for="add-zip">ZIP Code:</label>
-                            <input type="text" id="add-zip" name="zip">
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Additional Information</legend>
-                        <div>
-                            <label for="add-bio">Biography:</label>
-                            <textarea id="add-bio" name="bio" rows="3"></textarea>
-                        </div>
-                        <div>
-                            <label for="add-notes">Notes:</label>
-                            <textarea id="add-notes" name="notes" rows="2"></textarea>
-                        </div>
-                    </fieldset>
-                    <button type="submit">Add Person</button>
-                </form>
-            </section>
+            </div>
         </main>
 
-        <footer>
-            <p>&copy; 2025 Sam Black's Family</p>
-            <button id="csv-import-btn" style="margin-top: 10px; padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">📊 Add More Family Data</button>
-            
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center;">
-                <p style="color: #6c757d; font-size: 14px; margin-bottom: 10px;">Legal & Privacy</p>
-                <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-                    <a href="/privacy-policy.html" style="color: #3498db; text-decoration: none; font-size: 14px;">🔒 Privacy Policy</a>
-                    <a href="/terms-of-service.html" style="color: #3498db; text-decoration: none; font-size: 14px;">📋 Terms of Service</a>
+        <!-- Add Person Modal -->
+        <div id="add-person-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                <h2>Add New Person</h2>
+                <form id="add-person-form">
+                    <div style="margin-bottom: 15px;">
+                        <label for="name">Name *</label>
+                        <input type="text" id="name" name="name" required style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="birth_date">Birth Date</label>
+                        <input type="date" id="birth_date" name="birth_date" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="death_date">Death Date</label>
+                        <input type="date" id="death_date" name="death_date" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="gender">Gender</label>
+                        <select id="gender" name="gender" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <option value="">Select gender...</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="contact_email">Email</label>
+                        <input type="email" id="contact_email" name="contact_email" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="contact_phone">Phone</label>
+                        <input type="tel" id="contact_phone" name="contact_phone" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="contact_street">Street Address</label>
+                        <input type="text" id="contact_street" name="contact_street" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="contact_city">City</label>
+                        <input type="text" id="contact_city" name="contact_city" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="contact_state">State</label>
+                        <input type="text" id="contact_state" name="contact_state" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="contact_zip">ZIP Code</label>
+                        <input type="text" id="contact_zip" name="contact_zip" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="occupation">Occupation</label>
+                        <input type="text" id="occupation" name="occupation" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" name="notes" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="closeAddPersonModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancel</button>
+                        <button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer;">Add Person</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- CSV Upload Modal -->
+        <div id="csv-upload-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                <h2>Upload Family Data (CSV)</h2>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 10px; border-left: 4px solid #ffc107;">
+                    <h4 style="margin: 0 0 10px 0; color: #856404;">🔒 Data Protection Notice</h4>
+                    <p style="margin: 0; font-size: 14px; color: #856404;">
+                        <strong>Important:</strong> Before uploading family data, please ensure you have proper consent from all family members whose information you're adding.
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
+                    <h4 style="margin: 0 0 10px 0; color: #495057;">📋 Need a Template?</h4>
+                    <p style="margin: 0 0 15px 0; color: #6c757d; font-size: 14px;">
+                        Download our CSV template with the correct headers and sample data to get started.
+                    </p>
+                    <button onclick="downloadCSVTemplate()" style="background: #17a2b8; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        📥 Download CSV Template
+                    </button>
+                </div>
+                
+                <input type="file" id="csv-file" accept=".csv" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px;">
+                <div id="csv-preview" style="display: none; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; margin: 15px 0;"></div>
+                <div id="csv-error" style="color: #e74c3c; margin: 10px 0;"></div>
+                <div id="csv-success" style="color: #27ae60; margin: 10px 0;"></div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="closeCSVModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancel</button>
+                    <button id="upload-btn" onclick="uploadToBackend()" style="display: none; padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer;">Upload to Database</button>
                 </div>
             </div>
-        </footer>
-
-        <script src="js/data.js"></script>
-        <script src="js/app.js"></script>
-
-    <!-- Auth Modals -->
-    <div id="auth-modal" class="modal" style="display:none;">
-      <div class="modal-content">
-        <span class="close" id="close-auth-modal">&times;</span>
-        <h2 id="auth-modal-title">Login</h2>
-        <form id="login-form">
-          <div>
-            <label for="login-email">Email:</label>
-            <input type="email" id="login-email" required>
-          </div>
-          <div>
-            <label for="login-password">Password:</label>
-            <input type="password" id="login-password" required>
-          </div>
-          <button type="submit">Login</button>
-          <p id="login-error" style="color:red;"></p>
-        </form>
-        <form id="register-form" style="display:none;">
-          <div>
-            <label for="register-email">Email:</label>
-            <input type="email" id="register-email" required>
-          </div>
-          <div>
-            <label for="register-password">Password:</label>
-            <input type="password" id="register-password" required>
-          </div>
-          <button type="submit">Register</button>
-          <p id="register-error" style="color:red;"></p>
-        </form>
-        <div style="margin-top:10px;">
-          <a href="#" id="toggle-auth-mode">Don't have an account? Register</a>
         </div>
-      </div>
     </div>
 
-
-
-    <!-- Admin Dashboard Modal -->
-    <div id="admin-modal" class="modal" style="display:none;">
-      <div class="modal-content" style="max-width: 800px;">
-        <span class="close" id="close-admin-modal">&times;</span>
-        <h2 style="color: #2c3e50; margin-bottom: 20px;">👑 Admin Dashboard</h2>
+    <script src="js/app.js"></script>
+    <script>
+        // Modal helper functions
+        function closeAddPersonModal() {
+            document.getElementById('add-person-modal').style.display = 'none';
+        }
         
-        <div style="margin-bottom: 20px; padding: 15px; background: #e8f4fd; border-radius: 8px; border-left: 4px solid #3498db;">
-          <h3 style="margin: 0 0 10px 0; color: #2980b9;">📧 User Registration Notifications</h3>
-          <p style="margin: 0; color: #34495e; font-size: 14px;">
-            You'll receive email notifications when new users register. Approve or reject their accounts below.
-          </p>
-        </div>
+        function closeCSVModal() {
+            document.getElementById('csv-upload-modal').style.display = 'none';
+        }
         
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #2c3e50; margin-bottom: 15px;">⏳ Pending User Approvals</h3>
-          <div id="admin-status" style="margin-bottom: 15px;"></div>
-          <div id="pending-users-container">
-            <ul id="pending-users-list" style="list-style: none; padding: 0; margin: 0;"></ul>
-          </div>
-        </div>
-        
-        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-          <h4 style="margin: 0 0 10px 0; color: #495057;">📊 Database Stats</h4>
-          <div id="admin-stats" style="display: flex; gap: 20px; font-size: 14px; margin-bottom: 15px;">
-            <div><strong>People:</strong> <span id="people-count">-</span></div>
-            <div><strong>Relationships:</strong> <span id="relationships-count">-</span></div>
-            <div><strong>Users:</strong> <span id="users-count">-</span></div>
-            <div><strong>Pending Users:</strong> <span id="pending-count">0</span></div>
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <button onclick="refreshStats()" style="background: #17a2b8; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-              🔄 Refresh Stats
-            </button>
-            <button onclick="clearAllData()" style="background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-              🗑️ Clear All Data
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    </div>
+        // Add event listeners for modal buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const addPersonButton = document.getElementById('add-person-button');
+            if (addPersonButton) {
+                addPersonButton.addEventListener('click', function() {
+                    document.getElementById('add-person-modal').style.display = 'block';
+                });
+            }
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', function(event) {
+                const addModal = document.getElementById('add-person-modal');
+                const csvModal = document.getElementById('csv-upload-modal');
+                
+                if (event.target === addModal) {
+                    closeAddPersonModal();
+                }
+                if (event.target === csvModal) {
+                    closeCSVModal();
+                }
+            });
+            
+            // Populate person selectors for relationship finder
+            function populatePersonSelectors() {
+                const person1Select = document.getElementById('person1-select');
+                const person2Select = document.getElementById('person2-select');
+                
+                if (person1Select && person2Select) {
+                    const options = familyData.map(person => 
+                        `<option value="${person.id}">${person.name}</option>`
+                    ).join('');
+                    
+                    person1Select.innerHTML = '<option value="">Select first person...</option>' + options;
+                    person2Select.innerHTML = '<option value="">Select second person...</option>' + options;
+                }
+            }
+            
+            // Call this after family data is loaded
+            window.populatePersonSelectors = populatePersonSelectors;
+        });
+    </script>
 </body>
 </html>
