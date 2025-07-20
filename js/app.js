@@ -37,6 +37,20 @@ function showStep(step) {
     });
 }
 
+function showLoginForm() {
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('show-login-btn').style.background = '#3498db';
+    document.getElementById('show-register-btn').style.background = '#95a5a6';
+}
+
+function showRegisterForm() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    document.getElementById('show-login-btn').style.background = '#95a5a6';
+    document.getElementById('show-register-btn').style.background = '#3498db';
+}
+
 async function handleLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
@@ -63,6 +77,60 @@ async function handleLogin() {
         onboardingAuthToken = data.token;
         errorDiv.textContent = '';
         nextStep();
+    } catch (error) {
+        errorDiv.textContent = error.message;
+    }
+}
+
+async function handleRegister() {
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    const confirmPassword = document.getElementById('register-confirm-password').value;
+    const errorDiv = document.getElementById('register-error');
+    const successDiv = document.getElementById('register-success');
+    
+    if (!email || !password || !confirmPassword) {
+        errorDiv.textContent = 'Please fill in all fields';
+        return;
+    }
+    
+    if (password !== confirmPassword) {
+        errorDiv.textContent = 'Passwords do not match';
+        return;
+    }
+    
+    if (password.length < 6) {
+        errorDiv.textContent = 'Password must be at least 6 characters long';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Registration failed');
+        }
+        
+        errorDiv.textContent = '';
+        successDiv.textContent = data.message || 'Registration successful! Please wait for admin approval.';
+        
+        // Clear form
+        document.getElementById('register-email').value = '';
+        document.getElementById('register-password').value = '';
+        document.getElementById('register-confirm-password').value = '';
+        
+        // Show login form after successful registration
+        setTimeout(() => {
+            showLoginForm();
+            successDiv.textContent = '';
+        }, 3000);
+        
     } catch (error) {
         errorDiv.textContent = error.message;
     }
@@ -204,6 +272,17 @@ function completeOnboarding() {
     renderFamilyTree();
     renderUpcomingBirthdays();
     setupAppEventListeners();
+}
+
+function downloadCSVTemplate() {
+    // Create a link element to download the CSV template
+    const link = document.createElement('a');
+    link.href = `${API_BASE}/csv-template`;
+    link.download = 'family-tree-template.csv';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 function skipOnboarding() {

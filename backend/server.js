@@ -8,6 +8,46 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
+// Email notification setup (using nodemailer)
+const nodemailer = require('nodemailer');
+
+// Create transporter for email notifications
+const transporter = nodemailer.createTransporter({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER || 'your-email@gmail.com',
+    pass: process.env.EMAIL_PASS || 'your-app-password'
+  }
+});
+
+// Function to send notification email
+async function sendNewUserNotification(userEmail) {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@familytree.com';
+  
+  const mailOptions = {
+    from: process.env.EMAIL_USER || 'your-email@gmail.com',
+    to: adminEmail,
+    subject: '🌳 New User Registration - Family Tree App',
+    html: `
+      <h2>New User Registration</h2>
+      <p>A new user has registered for the Family Tree App:</p>
+      <ul>
+        <li><strong>Email:</strong> ${userEmail}</li>
+        <li><strong>Time:</strong> ${new Date().toLocaleString()}</li>
+      </ul>
+      <p>Please log into the admin dashboard to approve or reject this user.</p>
+      <p><a href="https://blackfamily.vercel.app">Go to Admin Dashboard</a></p>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('New user notification sent to admin');
+  } catch (error) {
+    console.error('Failed to send notification email:', error);
+  }
+}
+
 // CORS configuration for production
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
@@ -106,10 +146,34 @@ function adminRequired(req, res, next) {
 app.post('/api/register', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  
+  // Validate password strength
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+  }
+  
   const hash = await bcrypt.hash(password, 10);
   db.run('INSERT INTO users (email, password_hash) VALUES (?, ?)', [email, hash], function(err) {
-    if (err) return res.status(400).json({ error: 'Email already exists' });
-    res.json({ message: 'Registration successful, pending admin approval.' });
+    if (err) {
+      if (err.message.includes('UNIQUE constraint failed')) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      return res.status(500).json({ error: 'Registration failed' });
+    }
+    
+    // Send notification email to admin
+    sendNewUserNotification(email);
+    
+    res.json({ 
+      message: 'Registration successful! Your account is pending admin approval. You will be notified when approved.',
+      userId: this.lastID 
+    });
   });
 });
 
@@ -118,7 +182,7 @@ app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
   db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
     if (err || !user) return res.status(401).json({ error: 'Invalid credentials' });
-    if (!user.approved) return res.status(403).json({ error: 'Not approved by admin yet' });
+    if (!user.approved) return res.status(403).json({ error: 'Account not approved yet. Please wait for admin approval.' });
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
     const token = jwt.sign({ id: user.id, email: user.email, is_admin: !!user.is_admin }, SECRET, { expiresIn: '7d' });
@@ -128,26 +192,82 @@ app.post('/api/login', (req, res) => {
 
 // --- List Pending Users (Admin) ---
 app.get('/api/users/pending', authRequired, adminRequired, (req, res) => {
-  db.all('SELECT id, email, created_at FROM users WHERE approved = 0', [], (err, rows) => {
+  db.all('SELECT id, email, created_at FROM users WHERE approved = 0 ORDER BY created_at DESC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
 // --- Approve User (Admin) ---
-app.post('/api/users/:id/approve', authRequired, adminRequired, (req, res) => {
-  db.run('UPDATE users SET approved = 1 WHERE id = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ approved: true });
+app.post('/api/users/:id/approve', authRequired, adminRequired, async (req, res) => {
+  db.get('SELECT email FROM users WHERE id = ?', [req.params.id], async (err, user) => {
+    if (err || !user) return res.status(404).json({ error: 'User not found' });
+    
+    db.run('UPDATE users SET approved = 1 WHERE id = ?', [req.params.id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      // Send approval notification email
+      const approvalMailOptions = {
+        from: process.env.EMAIL_USER || 'your-email@gmail.com',
+        to: user.email,
+        subject: '✅ Account Approved - Family Tree App',
+        html: `
+          <h2>Account Approved!</h2>
+          <p>Your account has been approved by the administrator.</p>
+          <p>You can now log in to the Family Tree App and start building your family tree!</p>
+          <p><a href="https://blackfamily.vercel.app">Login to Family Tree App</a></p>
+        `
+      };
+      
+      transporter.sendMail(approvalMailOptions).catch(error => {
+        console.error('Failed to send approval email:', error);
+      });
+      
+      res.json({ approved: true, message: 'User approved and notification sent' });
+    });
   });
 });
 
 // --- Reject/Delete User (Admin) ---
-app.post('/api/users/:id/reject', authRequired, adminRequired, (req, res) => {
-  db.run('DELETE FROM users WHERE id = ?', [req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ deleted: true });
+app.post('/api/users/:id/reject', authRequired, adminRequired, async (req, res) => {
+  db.get('SELECT email FROM users WHERE id = ?', [req.params.id], async (err, user) => {
+    if (err || !user) return res.status(404).json({ error: 'User not found' });
+    
+    db.run('DELETE FROM users WHERE id = ?', [req.params.id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      // Send rejection notification email
+      const rejectionMailOptions = {
+        from: process.env.EMAIL_USER || 'your-email@gmail.com',
+        to: user.email,
+        subject: '❌ Account Application - Family Tree App',
+        html: `
+          <h2>Account Application Status</h2>
+          <p>We regret to inform you that your account application for the Family Tree App has not been approved.</p>
+          <p>If you believe this was an error, please contact the administrator.</p>
+        `
+      };
+      
+      transporter.sendMail(rejectionMailOptions).catch(error => {
+        console.error('Failed to send rejection email:', error);
+      });
+      
+      res.json({ deleted: true, message: 'User rejected and notification sent' });
+    });
   });
+});
+
+// --- Get CSV Template ---
+app.get('/api/csv-template', (req, res) => {
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="family-tree-template.csv"');
+  res.send(`First Name,Last Name,DOB,Email,Phone,Notes
+John,Doe,1980-05-15,john.doe@email.com,555-123-4567,Primary contact
+Jane,Doe,1982-08-22,jane.doe@email.com,555-123-4568,Spouse
+Michael,Doe,2005-03-10,michael.doe@email.com,555-123-4569,Child
+Sarah,Doe,2008-11-05,sarah.doe@email.com,555-123-4570,Child
+Robert,Smith,1955-12-03,robert.smith@email.com,555-123-4571,Father
+Mary,Smith,1957-04-18,mary.smith@email.com,555-123-4572,Mother`);
 });
 
 // --- Protect Family Tree Endpoints ---

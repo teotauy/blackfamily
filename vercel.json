@@ -2,11 +2,27 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.html",
+      "src": "*.html",
       "use": "@vercel/static"
     },
     {
-      "src": "untitled folder/*",
+      "src": "*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "images/*",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "css/*",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "js/*",
       "use": "@vercel/static"
     }
   ],
@@ -16,8 +32,8 @@
       "dest": "/index.html"
     },
     {
-      "src": "/untitled-folder/(.*)",
-      "dest": "/untitled folder/$1"
+      "src": "/api/(.*)",
+      "dest": "https://blackfamily-production.up.railway.app/api/$1"
     },
     {
       "src": "/(.*)",
@@ -25,6 +41,6 @@
     }
   ],
   "env": {
-    "API_BASE_URL": "@api_base_url"
+    "API_BASE_URL": "https://blackfamily-production.up.railway.app/api"
   }
 } 

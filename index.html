@@ -197,15 +197,46 @@
                 <button class="onboarding-button" onclick="nextStep()">Get Started</button>
             </div>
             
-            <!-- Step 2: Login -->
+            <!-- Step 2: Login/Register -->
             <div class="onboarding-step" id="step-2">
-                <h1 class="onboarding-title">🔐 Login to Your Account</h1>
-                <p class="onboarding-subtitle">Sign in to access your family tree data</p>
+                <h1 class="onboarding-title">🔐 Access Your Account</h1>
+                <p class="onboarding-subtitle">Login to your existing account or create a new one</p>
                 
                 <div class="onboarding-form">
-                    <input type="email" id="login-email" class="onboarding-input" placeholder="Email address" required>
-                    <input type="password" id="login-password" class="onboarding-input" placeholder="Password" required>
-                    <div id="login-error" class="error-message"></div>
+                    <div style="margin-bottom: 20px;">
+                        <button 
+                            onclick="showLoginForm()" 
+                            id="show-login-btn"
+                            style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; margin-right: 10px;"
+                        >
+                            Login
+                        </button>
+                        <button 
+                            onclick="showRegisterForm()" 
+                            id="show-register-btn"
+                            style="background: #95a5a6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;"
+                        >
+                            Create Account
+                        </button>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <div id="login-form" class="onboarding-form">
+                        <input type="email" id="login-email" class="onboarding-input" placeholder="Email address" required>
+                        <input type="password" id="login-password" class="onboarding-input" placeholder="Password" required>
+                        <div id="login-error" class="error-message"></div>
+                        <button class="onboarding-button" onclick="handleLogin()">Login</button>
+                    </div>
+                    
+                    <!-- Register Form -->
+                    <div id="register-form" class="onboarding-form" style="display: none;">
+                        <input type="email" id="register-email" class="onboarding-input" placeholder="Email address" required>
+                        <input type="password" id="register-password" class="onboarding-input" placeholder="Password (min 6 characters)" required>
+                        <input type="password" id="register-confirm-password" class="onboarding-input" placeholder="Confirm password" required>
+                        <div id="register-error" class="error-message"></div>
+                        <div id="register-success" class="success-message"></div>
+                        <button class="onboarding-button" onclick="handleRegister()">Create Account</button>
+                    </div>
                 </div>
                 
                 <div class="onboarding-progress">
@@ -215,7 +246,6 @@
                     <div class="progress-dot"></div>
                 </div>
                 
-                <button class="onboarding-button" onclick="handleLogin()">Login</button>
                 <button class="onboarding-button secondary" onclick="prevStep()">Back</button>
             </div>
             
@@ -225,6 +255,20 @@
                 <p class="onboarding-subtitle">Upload a CSV file with your family members to get started quickly</p>
                 
                 <div class="onboarding-form">
+                    <!-- Download Template Button -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
+                        <h4 style="margin: 0 0 10px 0; color: #495057;">📋 Need a Template?</h4>
+                        <p style="margin: 0 0 15px 0; color: #6c757d; font-size: 14px;">
+                            Download our CSV template with the correct headers and sample data to get started.
+                        </p>
+                        <button 
+                            onclick="downloadCSVTemplate()"
+                            style="background: #17a2b8; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;"
+                        >
+                            📥 Download CSV Template
+                        </button>
+                    </div>
+                    
                     <input type="file" id="csv-file" accept=".csv" class="onboarding-input" onchange="handleCSVUpload(event)">
                     <div id="csv-preview" class="csv-preview" style="display: none;"></div>
                     <div id="csv-error" class="error-message"></div>
