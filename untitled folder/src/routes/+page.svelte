@@ -1,13 +1,46 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 
-let step = 1; // 1: Welcome, 2: CSV, 3: Demo
+let step = 1; // 1: Welcome, 2: Login, 3: CSV, 4: Demo
 let csvResult: any[] = [];
 let csvError: string = '';
 let uploadStatus: string = '';
 let isUploading: boolean = false;
 
+// Login state
+let email: string = '';
+let password: string = '';
+let authToken: string = '';
+let isLoggedIn: boolean = false;
+let loginError: string = '';
+
 const BACKEND_URL = 'https://blackfamily-production.up.railway.app';
+
+async function handleLogin() {
+    loginError = '';
+    
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            authToken = data.token;
+            isLoggedIn = true;
+            step = 3; // Go to CSV upload
+        } else {
+            loginError = data.error || 'Login failed';
+        }
+    } catch (error) {
+        loginError = 'Network error: ' + error.message;
+    }
+}
 
 function handleCSVUpload(event: Event) {
     csvError = '';
@@ -29,7 +62,7 @@ function handleCSVUpload(event: Event) {
                 });
                 return obj;
             });
-            step = 3;
+            step = 4; // Go to demo
         } catch (err) {
             csvError = 'Error parsing CSV: ' + err;
             csvResult = [];
@@ -65,7 +98,7 @@ async function uploadToBackend() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer your-token-here' // You'll need to add authentication
+                    'Authorization': `Bearer ${authToken}`
                 },
                 body: JSON.stringify(person)
             });
@@ -89,6 +122,11 @@ function resetOnboarding() {
     csvResult = [];
     csvError = '';
     uploadStatus = '';
+    email = '';
+    password = '';
+    authToken = '';
+    isLoggedIn = false;
+    loginError = '';
 }
 </script>
 
@@ -97,8 +135,9 @@ function resetOnboarding() {
 <nav style="margin-bottom:2em;">
     <ol style="display:flex;gap:2em;list-style:none;padding:0;">
         <li style="font-weight:{step===1?'bold':'normal'};color:{step===1?'#1976d2':'#888'}">1. Welcome</li>
-        <li style="font-weight:{step===2?'bold':'normal'};color:{step===2?'#1976d2':'#888'}">2. CSV Upload</li>
-        <li style="font-weight:{step===3?'bold':'normal'};color:{step===3?'#1976d2':'#888'}">3. Demo</li>
+        <li style="font-weight:{step===2?'bold':'normal'};color:{step===2?'#1976d2':'#888'}">2. Login</li>
+        <li style="font-weight:{step===3?'bold':'normal'};color:{step===3?'#1976d2':'#888'}">3. CSV Upload</li>
+        <li style="font-weight:{step===4?'bold':'normal'};color:{step===4?'#1976d2':'#888'}">4. Demo</li>
     </ol>
     <button on:click={resetOnboarding} style="margin-top:1em;">Restart</button>
 </nav>
@@ -106,7 +145,7 @@ function resetOnboarding() {
 {#if step === 1}
     <section>
         <h2>Welcome to Family Tree App</h2>
-        <p>This is a simple demo app that can parse CSV files.</p>
+        <p>This app can upload CSV data to your family tree database.</p>
         <button on:click={() => step = 2} style="background:#1976d2;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">
             Get Started
         </button>
@@ -115,7 +154,56 @@ function resetOnboarding() {
 
 {#if step === 2}
     <section>
-        <h2>Step 2: Upload Your Contact CSV</h2>
+        <h2>Step 2: Login to Your Database</h2>
+        <p>You need to login to upload data to your family tree database.</p>
+        
+        <div style="max-width:400px;margin:2em 0;">
+            <div style="margin-bottom:1em;">
+                <label for="email" style="display:block;margin-bottom:0.5em;">Email:</label>
+                <input 
+                    type="email" 
+                    id="email"
+                    bind:value={email}
+                    style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;"
+                    placeholder="admin@familytree.com"
+                />
+            </div>
+            
+            <div style="margin-bottom:1em;">
+                <label for="password" style="display:block;margin-bottom:0.5em;">Password:</label>
+                <input 
+                    type="password" 
+                    id="password"
+                    bind:value={password}
+                    style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;"
+                    placeholder="adminpassword"
+                />
+            </div>
+            
+            <button 
+                on:click={handleLogin}
+                style="background:#1976d2;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;width:100%;"
+            >
+                Login
+            </button>
+            
+            {#if loginError}
+                <p style="color:red;margin-top:1em;">{loginError}</p>
+            {/if}
+        </div>
+        
+        <p style="color:#888;font-size:0.9em;">
+            <strong>Default credentials:</strong><br>
+            Email: admin@familytree.com<br>
+            Password: adminpassword
+        </p>
+    </section>
+{/if}
+
+{#if step === 3}
+    <section>
+        <h2>Step 3: Upload Your Contact CSV</h2>
+        <p>Now you can upload CSV files to your database.</p>
         <input type="file" accept=".csv,text/csv" on:change={handleCSVUpload} />
         {#if csvError}
             <p style="color:red;">{csvError}</p>
@@ -123,14 +211,14 @@ function resetOnboarding() {
         {#if csvResult.length > 0}
             <h3>CSV Parsed Successfully!</h3>
             <p>Found {csvResult.length} contacts</p>
-            <button on:click={() => step = 3} style="background:#1976d2;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">
+            <button on:click={() => step = 4} style="background:#1976d2;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">
                 Continue to Demo
             </button>
         {/if}
     </section>
 {/if}
 
-{#if step === 3}
+{#if step === 4}
     <section>
         <h2>Demo: CSV Data</h2>
         {#if csvResult.length > 0}
