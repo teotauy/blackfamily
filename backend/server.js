@@ -20,17 +20,31 @@ const transporter = nodemailer.createTransporter({
   }
 });
 
+// Admin configuration (will be set during setup)
+let adminConfig = {
+  name: '',
+  email: '',
+  phone: '',
+  familyName: '',
+  address: ''
+};
+
+// Check if admin is already set up
+function isAdminSetup() {
+  return adminConfig.email !== '';
+}
+
 // Function to send notification email
 async function sendNewUserNotification(userEmail) {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@familytree.com';
+  const adminEmail = adminConfig.email || process.env.ADMIN_EMAIL || 'admin@familytree.com';
   
   const mailOptions = {
     from: process.env.EMAIL_USER || 'your-email@gmail.com',
     to: adminEmail,
-    subject: '🌳 New User Registration - Family Tree App',
+    subject: `🌳 New User Registration - ${adminConfig.familyName || 'Family Tree App'}`,
     html: `
       <h2>New User Registration</h2>
-      <p>A new user has registered for the Family Tree App:</p>
+      <p>A new user has registered for the ${adminConfig.familyName || 'Family Tree App'}:</p>
       <ul>
         <li><strong>Email:</strong> ${userEmail}</li>
         <li><strong>Time:</strong> ${new Date().toLocaleString()}</li>
@@ -255,6 +269,82 @@ app.post('/api/users/:id/reject', authRequired, adminRequired, async (req, res) 
       res.json({ deleted: true, message: 'User rejected and notification sent' });
     });
   });
+});
+
+// --- Admin Setup Endpoints ---
+
+// Check if admin is already set up
+app.get('/api/admin/status', (req, res) => {
+  res.json({ isSetup: isAdminSetup() });
+});
+
+// Admin setup endpoint
+app.post('/api/admin/setup', async (req, res) => {
+  // Check if admin is already set up
+  if (isAdminSetup()) {
+    return res.status(400).json({ error: 'Admin is already set up' });
+  }
+  
+  const { name, email, password, phone, familyName, address } = req.body;
+  
+  // Validation
+  if (!name || !email || !password || !familyName) {
+    return res.status(400).json({ error: 'Name, email, password, and family name are required' });
+  }
+  
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+  
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  
+  try {
+    // Hash password
+    const hash = await bcrypt.hash(password, 10);
+    
+    // Create admin user in database
+    db.run('INSERT INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1)', 
+      [email, hash], function(err) {
+        if (err) {
+          if (err.message.includes('UNIQUE constraint failed')) {
+            return res.status(400).json({ error: 'Email already exists' });
+          }
+          return res.status(500).json({ error: 'Failed to create admin account' });
+        }
+        
+        // Set admin configuration
+        adminConfig = {
+          name,
+          email,
+          phone: phone || '',
+          familyName,
+          address: address || ''
+        };
+        
+        console.log(`Admin setup completed for ${familyName} by ${name} (${email})`);
+        
+        res.json({ 
+          message: 'Admin setup completed successfully',
+          adminInfo: adminConfig
+        });
+      });
+      
+  } catch (error) {
+    console.error('Admin setup error:', error);
+    res.status(500).json({ error: 'Admin setup failed' });
+  }
+});
+
+// Get admin configuration
+app.get('/api/admin/config', (req, res) => {
+  if (!isAdminSetup()) {
+    return res.status(404).json({ error: 'Admin not set up' });
+  }
+  res.json(adminConfig);
 });
 
 // --- Get CSV Template ---

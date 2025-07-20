@@ -686,6 +686,24 @@ async function apiCall(endpoint, options = {}) {
   }
 }
 
+// --- Check admin setup status ---
+async function checkAdminSetup() {
+    try {
+        const response = await fetch(`${API_BASE}/admin/status`);
+        const data = await response.json();
+        
+        if (!data.isSetup) {
+            // Admin not set up, redirect to setup page
+            window.location.href = '/admin-setup';
+            return false;
+        }
+        return true;
+    } catch (error) {
+        console.error('Error checking admin setup:', error);
+        return true; // Assume setup is complete if we can't check
+    }
+}
+
 // --- Load data from backend on page load ---
 async function loadFamilyDataFromAPI() {
     try {
@@ -727,6 +745,12 @@ async function loadFamilyDataFromAPI() {
 
 // --- Replace initial data load ---
 document.addEventListener('DOMContentLoaded', async () => {
+    // Check admin setup first
+    const adminSetup = await checkAdminSetup();
+    if (!adminSetup) {
+        return; // Will redirect to admin setup
+    }
+    
     // Always update UI first to show correct initial state
     updateUIForAuth();
     

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Setup - Family Tree App</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .setup-form {
+            text-align: left;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .required {
+            color: #e74c3c;
+        }
+        .info-box {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .warning-box {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        .setup-button {
+            background: #3498db;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        .setup-button:hover {
+            background: #2980b9;
+        }
+        .setup-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .success-message {
+            color: #27ae60;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ecf0f1;
+            color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+        .step.active {
+            background: #3498db;
+            color: white;
+        }
+        .step.completed {
+            background: #27ae60;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="logo">🌳</div>
+        <h1>Family Tree App Setup</h1>
+        <p class="subtitle">Configure your family tree application with admin information</p>
+        
+        <div class="step-indicator">
+            <div class="step active">1</div>
+            <div class="step">2</div>
+            <div class="step">3</div>
+        </div>
+        
+        <div class="info-box">
+            <h3 style="margin: 0 0 10px 0; color: #2980b9;">👑 Admin Account Setup</h3>
+            <p style="margin: 0; font-size: 14px;">
+                This will create the primary admin account for your family tree. The admin information will be used in legal documents and for system administration.
+            </p>
+        </div>
+        
+        <form class="setup-form" id="admin-setup-form">
+            <div class="form-group">
+                <label for="admin-name">Full Name <span class="required">*</span></label>
+                <input type="text" id="admin-name" name="adminName" required placeholder="Enter your full name">
+            </div>
+            
+            <div class="form-group">
+                <label for="admin-email">Email Address <span class="required">*</span></label>
+                <input type="email" id="admin-email" name="adminEmail" required placeholder="Enter your email address">
+            </div>
+            
+            <div class="form-group">
+                <label for="admin-password">Password <span class="required">*</span></label>
+                <input type="password" id="admin-password" name="adminPassword" required placeholder="Create a strong password (min 8 characters)">
+            </div>
+            
+            <div class="form-group">
+                <label for="admin-confirm-password">Confirm Password <span class="required">*</span></label>
+                <input type="password" id="admin-confirm-password" name="adminConfirmPassword" required placeholder="Confirm your password">
+            </div>
+            
+            <div class="form-group">
+                <label for="admin-phone">Phone Number</label>
+                <input type="tel" id="admin-phone" name="adminPhone" placeholder="Enter your phone number (optional)">
+            </div>
+            
+            <div class="form-group">
+                <label for="family-name">Family Name <span class="required">*</span></label>
+                <input type="text" id="family-name" name="familyName" required placeholder="e.g., Black Family, Smith Family">
+            </div>
+            
+            <div class="form-group">
+                <label for="admin-address">Address</label>
+                <textarea id="admin-address" name="adminAddress" rows="3" placeholder="Enter your address (optional)"></textarea>
+            </div>
+            
+            <div class="warning-box">
+                <h4 style="margin: 0 0 10px 0; color: #856404;">🔒 Important Information</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #856404;">
+                    <li>This admin account will have full control over the family tree</li>
+                    <li>Admin information will appear in legal documents</li>
+                    <li>You'll be responsible for user approvals and data management</li>
+                    <li>This setup cannot be undone - choose carefully</li>
+                </ul>
+            </div>
+            
+            <div id="setup-error" class="error-message"></div>
+            <div id="setup-success" class="success-message"></div>
+            
+            <button type="submit" class="setup-button" id="setup-submit-btn">
+                🚀 Complete Setup
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        
+        document.getElementById('admin-setup-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('setup-submit-btn');
+            const errorDiv = document.getElementById('setup-error');
+            const successDiv = document.getElementById('setup-success');
+            
+            // Clear messages
+            errorDiv.textContent = '';
+            successDiv.textContent = '';
+            
+            // Get form data
+            const formData = new FormData(e.target);
+            const adminData = {
+                name: formData.get('adminName').trim(),
+                email: formData.get('adminEmail').trim(),
+                password: formData.get('adminPassword'),
+                confirmPassword: formData.get('adminConfirmPassword'),
+                phone: formData.get('adminPhone').trim(),
+                familyName: formData.get('familyName').trim(),
+                address: formData.get('adminAddress').trim()
+            };
+            
+            // Validation
+            if (!adminData.name || !adminData.email || !adminData.password || !adminData.familyName) {
+                errorDiv.textContent = 'Please fill in all required fields.';
+                return;
+            }
+            
+            if (adminData.password.length < 8) {
+                errorDiv.textContent = 'Password must be at least 8 characters long.';
+                return;
+            }
+            
+            if (adminData.password !== adminData.confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match.';
+                return;
+            }
+            
+            if (!isValidEmail(adminData.email)) {
+                errorDiv.textContent = 'Please enter a valid email address.';
+                return;
+            }
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Setting up...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/admin/setup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(adminData)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Setup failed');
+                }
+                
+                successDiv.textContent = '✅ Admin setup completed successfully! Redirecting to main app...';
+                
+                // Store admin info in localStorage for the app
+                localStorage.setItem('adminInfo', JSON.stringify({
+                    name: adminData.name,
+                    email: adminData.email,
+                    familyName: adminData.familyName,
+                    phone: adminData.phone,
+                    address: adminData.address
+                }));
+                
+                // Redirect to main app after a short delay
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+                
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Complete Setup';
+            }
+        });
+        
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        // Check if admin is already set up
+        window.addEventListener('load', async function() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/status`);
+                const data = await response.json();
+                
+                if (data.isSetup) {
+                    // Admin already set up, redirect to main app
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.log('Checking admin status...');
+            }
+        });
+    </script>
+</body>
+</html> 
