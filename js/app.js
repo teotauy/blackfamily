@@ -808,3 +808,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Always attach Import CSV button handler after DOM loads
+
+document.addEventListener('DOMContentLoaded', function() {
+    var importCsvButton = document.getElementById('import-csv-button');
+    var csvModal = document.getElementById('csv-upload-modal');
+    if (importCsvButton && csvModal) {
+        importCsvButton.addEventListener('click', function() {
+            console.log('Import CSV button clicked!');
+            csvModal.style.display = 'block';
+        });
+    }
+});
