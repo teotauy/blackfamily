@@ -2,7 +2,228 @@ const generationColors = ['#4A90E2', '#50E3C2', '#F5A623', '#BD10E0', '#7ED321',
 const defaultProfilePic = "images/placeholder_default.png"; // Path to your default placeholder
 
 // --- API URL ---
-const API_BASE = window.API_BASE_URL || '/api';
+const API_BASE = 'https://blackfamily-production.up.railway.app/api';
+
+// --- Onboarding State ---
+let currentStep = 1;
+let onboardingAuthToken = '';
+let csvData = [];
+
+// --- Onboarding Functions ---
+function nextStep() {
+    if (currentStep < 4) {
+        currentStep++;
+        showStep(currentStep);
+    }
+}
+
+function prevStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        showStep(currentStep);
+    }
+}
+
+function showStep(step) {
+    // Hide all steps
+    document.querySelectorAll('.onboarding-step').forEach(el => el.classList.remove('active'));
+    
+    // Show current step
+    document.getElementById(`step-${step}`).classList.add('active');
+    
+    // Update progress dots
+    document.querySelectorAll('.progress-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index === step - 1);
+    });
+}
+
+async function handleLogin() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const errorDiv = document.getElementById('login-error');
+    
+    if (!email || !password) {
+        errorDiv.textContent = 'Please enter both email and password';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed');
+        }
+        
+        onboardingAuthToken = data.token;
+        errorDiv.textContent = '';
+        nextStep();
+    } catch (error) {
+        errorDiv.textContent = error.message;
+    }
+}
+
+function handleCSVUpload(event) {
+    const file = event.target.files[0];
+    const errorDiv = document.getElementById('csv-error');
+    const successDiv = document.getElementById('csv-success');
+    const previewDiv = document.getElementById('csv-preview');
+    const uploadBtn = document.getElementById('upload-btn');
+    
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const csv = e.target.result;
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const rows = lines.slice(1).filter(line => line.trim()).map(line => {
+                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                return row;
+            });
+            
+            csvData = rows;
+            
+            // Show preview
+            let previewHTML = '<table class="csv-table"><thead><tr>';
+            headers.forEach(header => {
+                previewHTML += `<th>${header}</th>`;
+            });
+            previewHTML += '</tr></thead><tbody>';
+            
+            rows.slice(0, 5).forEach(row => {
+                previewHTML += '<tr>';
+                headers.forEach(header => {
+                    previewHTML += `<td>${row[header] || ''}</td>`;
+                });
+                previewHTML += '</tr>';
+            });
+            
+            if (rows.length > 5) {
+                previewHTML += `<tr><td colspan="${headers.length}" style="text-align:center;color:#666;">... and ${rows.length - 5} more rows</td></tr>`;
+            }
+            
+            previewHTML += '</tbody></table>';
+            previewDiv.innerHTML = previewHTML;
+            previewDiv.style.display = 'block';
+            
+            successDiv.textContent = `Found ${rows.length} people in CSV`;
+            errorDiv.textContent = '';
+            uploadBtn.style.display = 'inline-block';
+        } catch (error) {
+            errorDiv.textContent = 'Error parsing CSV file: ' + error.message;
+            successDiv.textContent = '';
+            previewDiv.style.display = 'none';
+            uploadBtn.style.display = 'none';
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+async function uploadToBackend() {
+    const errorDiv = document.getElementById('csv-error');
+    const successDiv = document.getElementById('csv-success');
+    const uploadBtn = document.getElementById('upload-btn');
+    
+    if (!onboardingAuthToken) {
+        errorDiv.textContent = 'Please login first';
+        return;
+    }
+    
+    if (!csvData.length) {
+        errorDiv.textContent = 'No CSV data to upload';
+        return;
+    }
+    
+    uploadBtn.textContent = 'Uploading...';
+    uploadBtn.disabled = true;
+    
+    try {
+        // Convert CSV data to the format your backend expects
+        const peopleData = csvData.map(row => ({
+            name: `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim(),
+            birthDate: row['DOB'] || row['Birth Date'] || '',
+            contact_email: row['Email'] || '',
+            contact_phone: row['Phone'] || '',
+            bio: `Imported from CSV: ${row['Notes'] || ''}`
+        }));
+        
+        // Upload each person to the backend
+        for (const person of peopleData) {
+            const response = await fetch(`${API_BASE}/people`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${onboardingAuthToken}`
+                },
+                body: JSON.stringify(person)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to upload: ${response.statusText}`);
+            }
+        }
+        
+        successDiv.textContent = `Successfully uploaded ${peopleData.length} people!`;
+        errorDiv.textContent = '';
+        nextStep();
+    } catch (error) {
+        errorDiv.textContent = `Upload failed: ${error.message}`;
+        successDiv.textContent = '';
+    } finally {
+        uploadBtn.textContent = 'Upload to Database';
+        uploadBtn.disabled = false;
+    }
+}
+
+function completeOnboarding() {
+    // Hide onboarding overlay
+    document.getElementById('onboarding-overlay').style.display = 'none';
+    
+    // Show the main family tree app
+    document.getElementById('family-tree-app').style.display = 'block';
+    
+    // Set the auth token for the main app
+    authToken = onboardingAuthToken;
+    localStorage.setItem('authToken', authToken);
+    
+    // Initialize the main app
+    updateUIForAuth();
+    loadFamilyDataFromAPI();
+    renderFamilyTree();
+    renderUpcomingBirthdays();
+    setupAppEventListeners();
+}
+
+function skipOnboarding() {
+    // Hide onboarding overlay
+    document.getElementById('onboarding-overlay').style.display = 'none';
+    
+    // Show the main family tree app
+    document.getElementById('family-tree-app').style.display = 'block';
+    
+    // Check if user is already logged in
+    if (authToken) {
+        updateUIForAuth();
+        loadFamilyDataFromAPI();
+        renderFamilyTree();
+        renderUpcomingBirthdays();
+        setupAppEventListeners();
+    } else {
+        showAuthModal();
+    }
+}
 
 // --- Authentication State ---
 let currentUser = null;
@@ -2461,3 +2682,56 @@ function showEditRelationshipsModal(personId) {
 
 // Update tree and details display logic to use nickname if present, and show all new fields
 // ... existing code ...
+
+// --- App Initialization ---
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user has completed onboarding or is already logged in
+    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
+    const existingAuthToken = localStorage.getItem('authToken');
+    
+    if (hasCompletedOnboarding || existingAuthToken) {
+        // Skip onboarding, show main app
+        document.getElementById('onboarding-overlay').style.display = 'none';
+        document.getElementById('family-tree-app').style.display = 'block';
+        
+        if (existingAuthToken) {
+            authToken = existingAuthToken;
+            updateUIForAuth();
+            loadFamilyDataFromAPI();
+            renderFamilyTree();
+            renderUpcomingBirthdays();
+            setupAppEventListeners();
+        } else {
+            showAuthModal();
+        }
+    } else {
+        // Show onboarding for new users
+        document.getElementById('onboarding-overlay').style.display = 'flex';
+        document.getElementById('family-tree-app').style.display = 'none';
+    }
+    
+    // Setup auth event listeners for the main app
+    setupAuthEventListeners();
+});
+
+// Mark onboarding as completed when user finishes
+function completeOnboarding() {
+    localStorage.setItem('hasCompletedOnboarding', 'true');
+    
+    // Hide onboarding overlay
+    document.getElementById('onboarding-overlay').style.display = 'none';
+    
+    // Show the main family tree app
+    document.getElementById('family-tree-app').style.display = 'block';
+    
+    // Set the auth token for the main app
+    authToken = onboardingAuthToken;
+    localStorage.setItem('authToken', authToken);
+    
+    // Initialize the main app
+    updateUIForAuth();
+    loadFamilyDataFromAPI();
+    renderFamilyTree();
+    renderUpcomingBirthdays();
+    setupAppEventListeners();
+}
