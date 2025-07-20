@@ -1,6 +1,15 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { parse } from 'parse-gedcom';
+import { browser } from '$app/environment';
+
+let parseGedcom: any = null;
+
+onMount(async () => {
+    if (browser) {
+        const module = await import('parse-gedcom');
+        parseGedcom = module.parse;
+    }
+});
 
 let step = 1; // 1: GEDCOM, 2: CSV, 3: Matching
 let gedcomResult: any = null;
@@ -23,7 +32,11 @@ function handleGEDCOMUpload(event: Event) {
     reader.onload = (e) => {
         try {
             const text = e.target?.result as string;
-            gedcomResult = parse(text);
+            if (!parseGedcom) {
+                gedcomError = 'GEDCOM parser not loaded yet';
+                return;
+            }
+            gedcomResult = parseGedcom(text);
             step = 2;
         } catch (err) {
             gedcomError = 'Error parsing GEDCOM: ' + err;
