@@ -799,4 +799,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show password gate
         showPasswordGate();
     }
+
+    // Add event listener for Import CSV button
+    const importCsvButton = document.getElementById('import-csv-button');
+    if (importCsvButton) {
+        importCsvButton.addEventListener('click', function() {
+            document.getElementById('csv-upload-modal').style.display = 'block';
+        });
+    }
 });
