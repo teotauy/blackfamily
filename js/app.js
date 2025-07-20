@@ -812,40 +812,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
-    // For now, skip admin setup check to avoid backend errors
-    // const adminSetup = await checkAdminSetup();
-    // if (!adminSetup) {
-    //     return; // Will redirect to admin setup
-    // }
+    // Skip authentication entirely - go straight to app
+    console.log('Skipping authentication - going straight to app');
     
-    // Always update UI first to show correct initial state
-    updateUIForAuth();
-    
-    // Check if user is already logged in
-    if (authToken) {
-        try {
-            // Try to load data - if it fails, user will be logged out automatically
-            await loadFamilyDataFromAPI();
-            if (familyData.length > 0) {
-                renderFamilyTree();
-                renderUpcomingBirthdays();
-                setupAppEventListeners(); // Setup all app functionality after successful auth
-            }
-            // Update UI again after successful data load
-            updateUIForAuth();
-        } catch (error) {
-            console.error('Failed to load initial data:', error);
-            // If loading fails, the apiCall function will handle logout
-        }
-    } else {
-        // Show login modal if no token
-        showAuthModal();
+    // Load sample data or initialize empty state
+    if (!familyData || familyData.length === 0) {
+        familyData = []; // Start with empty data
     }
     
-    // Setup auth event listeners
-    setupAuthEventListeners();
+    // Show the main app directly
+    document.getElementById('onboarding-overlay').style.display = 'none';
+    document.getElementById('family-tree-app').style.display = 'block';
     
-    console.log('App initialization complete');
+    // Setup all app functionality
+    setupAppEventListeners();
+    
+    // Render empty state
+    renderFamilyTree();
+    renderUpcomingBirthdays();
+    
+    console.log('App initialization complete - no login required');
 });
 
 // --- Replace add/edit/delete person/relationship logic with API calls ---
