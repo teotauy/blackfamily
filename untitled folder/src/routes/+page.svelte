@@ -365,8 +365,11 @@ function resetOnboarding() {
             <button on:click={() => step = 3} style="background:#1976d2;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;margin-right:1em;">
                 Upload More Data
             </button>
-            <button on:click={() => step = 4} style="background:#6c757d;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">
+            <button on:click={() => step = 4} style="background:#6c757d;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;margin-right:1em;">
                 Back to Demo
+            </button>
+            <button on:click={() => window.location.href = '/'} style="background:#28a745;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">
+                🌳 Enter Full Family Tree App
             </button>
         </div>
     </section>
