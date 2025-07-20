@@ -1,58 +1,24 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "*.html",
-      "use": "@vercel/static"
+      "source": "/admin-setup",
+      "destination": "/admin-setup.html"
     },
     {
-      "src": "*.js",
-      "use": "@vercel/static"
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy.html"
     },
     {
-      "src": "*.css",
-      "use": "@vercel/static"
+      "source": "/terms-of-service",
+      "destination": "/terms-of-service.html"
     },
     {
-      "src": "images/*",
-      "use": "@vercel/static"
+      "source": "/api/(.*)",
+      "destination": "https://blackfamily-production.up.railway.app/api/$1"
     },
     {
-      "src": "css/*",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "js/*",
-      "use": "@vercel/static"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ],
-  "routes": [
-    {
-      "src": "/admin-setup",
-      "dest": "/admin-setup.html"
-    },
-    {
-      "src": "/privacy-policy",
-      "dest": "/privacy-policy.html"
-    },
-    {
-      "src": "/terms-of-service",
-      "dest": "/terms-of-service.html"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "https://blackfamily-production.up.railway.app/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
-  "env": {
-    "API_BASE_URL": "https://blackfamily-production.up.railway.app/api"
-  }
+  ]
 } 
