@@ -866,3 +866,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+window.uploadToBackend = uploadToBackend;
