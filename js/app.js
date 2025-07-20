@@ -908,7 +908,7 @@ async function checkFamilyPassword() {
     const errorDiv = document.getElementById('password-error');
     
     // Set your family password here
-    const correctPassword = 'blackfamily2024'; // You can change this to whatever you want
+    const correctPassword = 'SamBlack'; // You can change this to whatever you want
     
     if (password === correctPassword) {
         // Password correct - grant access
