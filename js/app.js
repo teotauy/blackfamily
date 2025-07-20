@@ -709,36 +709,43 @@ async function rejectUser(userId) {
 }
 
 // --- API Helper with Auth ---
+// Local storage API - no backend required
+function getLocalStorageData(key) {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error reading from localStorage:', error);
+    return [];
+  }
+}
+
+function setLocalStorageData(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('Error writing to localStorage:', error);
+    return false;
+  }
+}
+
 async function apiCall(endpoint, options = {}) {
-  const url = `${API_BASE}${endpoint}`;
-  const config = {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
-      ...options.headers
+  // Simulate API calls using localStorage
+  console.log('API call:', endpoint, options);
+  
+  // Return a mock response object
+  return {
+    ok: true,
+    json: async () => {
+      if (endpoint === '/people') {
+        return getLocalStorageData('familyData') || [];
+      } else if (endpoint === '/relationships') {
+        return getLocalStorageData('relationships') || [];
+      }
+      return [];
     }
   };
-  
-  try {
-    const response = await fetch(url, config);
-    if (response.status === 401) {
-      console.log('Authentication failed, logging out...');
-      logout();
-      return null;
-    }
-    if (!response.ok) {
-      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
-    }
-    return response;
-  } catch (error) {
-    console.error(`API call to ${endpoint} failed:`, error);
-    // If it's a network error and we have a token, it might be invalid
-    if (authToken && error.message.includes('fetch')) {
-      logout();
-    }
-    throw error;
-  }
 }
 
 // --- Check admin setup status ---
@@ -760,19 +767,12 @@ async function checkAdminSetup() {
     }
 }
 
-// --- Load data from backend on page load ---
+// --- Load data from localStorage ---
 async function loadFamilyDataFromAPI() {
     try {
-        const [peopleRes, relsRes] = await Promise.all([
-            apiCall('/people'),
-            apiCall('/relationships')
-        ]);
-        if (!peopleRes || !relsRes) {
-            console.error('Failed to load data from API');
-            return;
-        }
-        const people = await peopleRes.json();
-        const relationships = await relsRes.json();
+        const people = getLocalStorageData('familyData') || [];
+        const relationships = getLocalStorageData('relationships') || [];
+        
         // Build relationships into people
         const personMap = new Map(people.map(p => [p.id, { ...p, parents: [], children: [], marriages: [], contact: {
             email: p.contact_email,
@@ -782,6 +782,7 @@ async function loadFamilyDataFromAPI() {
             state: p.contact_state,
             zip: p.contact_zip
         }}]));
+        
         relationships.forEach(rel => {
             const person = personMap.get(rel.person_id);
             if (!person) return;
@@ -793,9 +794,12 @@ async function loadFamilyDataFromAPI() {
                 person.marriages.push({ spouseId: rel.related_id });
             }
         });
+        
         familyData = Array.from(personMap.values());
+        console.log('Loaded family data from localStorage:', familyData.length, 'people');
     } catch (error) {
         console.error('Error loading family data:', error);
+        familyData = [];
     }
 }
 
@@ -815,10 +819,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Skip authentication entirely - go straight to app
     console.log('Skipping authentication - going straight to app');
     
-    // Load sample data or initialize empty state
-    if (!familyData || familyData.length === 0) {
-        familyData = []; // Start with empty data
-    }
+    // Load data from localStorage
+    await loadFamilyDataFromAPI();
     
     // Show the main app directly
     document.getElementById('onboarding-overlay').style.display = 'none';
@@ -827,45 +829,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup all app functionality
     setupAppEventListeners();
     
-    // Render empty state
+    // Render the family tree
     renderFamilyTree();
     renderUpcomingBirthdays();
     
     console.log('App initialization complete - no login required');
 });
 
-// --- Replace add/edit/delete person/relationship logic with API calls ---
-// Example for adding a person:
+// --- Local storage functions for people and relationships ---
 async function addPersonAPI(personObj) {
-    const res = await apiCall('/people', {
-        method: 'POST',
-        body: JSON.stringify(personObj)
-    });
-    if (!res) return null;
-    const data = await res.json();
-    return data.id;
+    const people = getLocalStorageData('familyData') || [];
+    const newPerson = {
+        ...personObj,
+        id: Date.now() + Math.random() // Simple ID generation
+    };
+    people.push(newPerson);
+    setLocalStorageData('familyData', people);
+    familyData = people; // Update global state
+    return newPerson.id;
 }
 
 async function updatePersonAPI(id, personObj) {
-    await apiCall(`/people/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(personObj)
-    });
+    const people = getLocalStorageData('familyData') || [];
+    const index = people.findIndex(p => p.id == id);
+    if (index !== -1) {
+        people[index] = { ...people[index], ...personObj };
+        setLocalStorageData('familyData', people);
+        familyData = people; // Update global state
+    }
 }
 
 async function deletePersonAPI(id) {
-    await apiCall(`/people/${id}`, { method: 'DELETE' });
+    const people = getLocalStorageData('familyData') || [];
+    const filteredPeople = people.filter(p => p.id != id);
+    setLocalStorageData('familyData', filteredPeople);
+    familyData = filteredPeople; // Update global state
 }
 
 async function addRelationshipAPI(person_id, related_id, type) {
-    await apiCall('/relationships', {
-        method: 'POST',
-        body: JSON.stringify({ person_id, related_id, type })
-    });
+    const relationships = getLocalStorageData('relationships') || [];
+    const newRelationship = {
+        id: Date.now() + Math.random(),
+        person_id: parseInt(person_id),
+        related_id: parseInt(related_id),
+        type: type
+    };
+    relationships.push(newRelationship);
+    setLocalStorageData('relationships', relationships);
 }
 
 async function deleteRelationshipAPI(relId) {
-    await apiCall(`/relationships/${relId}`, { method: 'DELETE' });
+    const relationships = getLocalStorageData('relationships') || [];
+    const filteredRelationships = relationships.filter(r => r.id != relId);
+    setLocalStorageData('relationships', filteredRelationships);
 }
 
 async function deletePerson(personId) {
@@ -989,7 +1005,7 @@ function setupAuthEventListeners() {
     };
 }
 
-// Setup all the app event listeners (only called after successful login)
+// Setup all the app event listeners (no login required)
 function setupAppEventListeners() {
     // Setup Autocompletes
     setupAutocomplete('add-parents-input', 'add-parents-suggestions', 'selected-parents-list', 'add-parents-ids', 'parent');
