@@ -586,10 +586,32 @@
 
     <!-- Admin Dashboard Modal -->
     <div id="admin-modal" class="modal" style="display:none;">
-      <div class="modal-content">
+      <div class="modal-content" style="max-width: 800px;">
         <span class="close" id="close-admin-modal">&times;</span>
-        <h2>Pending User Approvals</h2>
-        <ul id="pending-users-list"></ul>
+        <h2 style="color: #2c3e50; margin-bottom: 20px;">👑 Admin Dashboard</h2>
+        
+        <div style="margin-bottom: 20px; padding: 15px; background: #e8f4fd; border-radius: 8px; border-left: 4px solid #3498db;">
+          <h3 style="margin: 0 0 10px 0; color: #2980b9;">📧 User Registration Notifications</h3>
+          <p style="margin: 0; color: #34495e; font-size: 14px;">
+            You'll receive email notifications when new users register. Approve or reject their accounts below.
+          </p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h3 style="color: #2c3e50; margin-bottom: 15px;">⏳ Pending User Approvals</h3>
+          <div id="admin-status" style="margin-bottom: 15px;"></div>
+          <div id="pending-users-container">
+            <ul id="pending-users-list" style="list-style: none; padding: 0; margin: 0;"></ul>
+          </div>
+        </div>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: #495057;">📊 Quick Stats</h4>
+          <div id="admin-stats" style="display: flex; gap: 20px; font-size: 14px;">
+            <div><strong>Pending Users:</strong> <span id="pending-count">0</span></div>
+            <div><strong>Total Users:</strong> <span id="total-count">0</span></div>
+          </div>
+        </div>
       </div>
     </div>
     </div>

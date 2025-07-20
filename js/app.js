@@ -410,7 +410,7 @@ function updateUIForAuth() {
       <div style="display: flex; align-items: center; gap: 10px;">
         <span style="color: #666; font-size: 14px;">Welcome, ${currentUser?.email || 'User'}!</span>
         <button id="logout-btn" style="padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Logout</button>
-        ${isAdmin ? '<button id="admin-btn" style="padding: 8px 16px; background: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">👑 Admin</button>' : ''}
+        ${isAdmin ? '<button id="admin-btn" style="padding: 8px 16px; background: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; position: relative;">👑 Admin <span id="admin-notification-badge" style="display: none; position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; display: flex; align-items: center; justify-content: center;">0</span></button>' : ''}
       </div>
     `;
     
@@ -418,6 +418,8 @@ function updateUIForAuth() {
     document.getElementById('logout-btn').onclick = logout;
     if (isAdmin) {
       document.getElementById('admin-btn').onclick = showAdminDashboard;
+      // Check for pending users and update notification badge
+      checkPendingUsers();
     }
   } else {
     headerAuthSection.innerHTML = `
@@ -468,23 +470,83 @@ function updateUIForAuth() {
 
 async function showAdminDashboard() {
   try {
+    const statusDiv = document.getElementById('admin-status');
+    statusDiv.innerHTML = '<p style="color: #666;">Loading pending users...</p>';
+    
     const response = await fetch(`${API_BASE}/users/pending`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
+    
+    if (!response.ok) {
+      throw new Error('Failed to load pending users');
+    }
+    
     const pendingUsers = await response.json();
     
     const list = document.getElementById('pending-users-list');
     list.innerHTML = '';
     
-    if (pendingUsers.length === 0) {
-      list.innerHTML = '<li>No pending users</li>';
+    // Update stats and notification badge
+    document.getElementById('pending-count').textContent = pendingUsers.length;
+    const badge = document.getElementById('admin-notification-badge');
+    if (pendingUsers.length > 0) {
+      badge.textContent = pendingUsers.length;
+      badge.style.display = 'flex';
     } else {
+      badge.style.display = 'none';
+    }
+    
+    if (pendingUsers.length === 0) {
+      list.innerHTML = `
+        <li style="padding: 20px; text-align: center; color: #666; background: #f8f9fa; border-radius: 8px;">
+          <p style="margin: 0;">🎉 No pending user approvals!</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px;">All registered users have been processed.</p>
+        </li>
+      `;
+      statusDiv.innerHTML = '<p style="color: #27ae60;">✅ All users processed</p>';
+    } else {
+      statusDiv.innerHTML = `<p style="color: #f39c12;">⚠️ ${pendingUsers.length} user(s) waiting for approval</p>`;
+      
       pendingUsers.forEach(user => {
         const li = document.createElement('li');
+        const registrationDate = new Date(user.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        li.style.cssText = `
+          padding: 15px;
+          margin-bottom: 10px;
+          background: white;
+          border: 1px solid #e0e0e0;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        `;
+        
         li.innerHTML = `
-          ${user.email} (registered: ${new Date(user.created_at).toLocaleDateString()})
-          <button onclick="approveUser(${user.id})">Approve</button>
-          <button onclick="rejectUser(${user.id})">Reject</button>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; color: #2c3e50; margin-bottom: 5px;">${user.email}</div>
+              <div style="font-size: 12px; color: #7f8c8d;">Registered: ${registrationDate}</div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button 
+                onclick="approveUser(${user.id})"
+                style="background: #27ae60; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+              >
+                ✅ Approve
+              </button>
+              <button 
+                onclick="rejectUser(${user.id})"
+                style="background: #e74c3c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+              >
+                ❌ Reject
+              </button>
+            </div>
+          </div>
         `;
         list.appendChild(li);
       });
@@ -493,31 +555,94 @@ async function showAdminDashboard() {
     document.getElementById('admin-modal').style.display = 'block';
   } catch (error) {
     console.error('Error loading pending users:', error);
+    document.getElementById('admin-status').innerHTML = '<p style="color: #e74c3c;">❌ Error loading pending users</p>';
   }
 }
 
 async function approveUser(userId) {
   try {
-    await fetch(`${API_BASE}/users/${userId}/approve`, {
+    const statusDiv = document.getElementById('admin-status');
+    statusDiv.innerHTML = '<p style="color: #666;">Approving user...</p>';
+    
+    const response = await fetch(`${API_BASE}/users/${userId}/approve`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${authToken}` }
     });
-    showAdminDashboard(); // Refresh the list
+    
+    if (!response.ok) {
+      throw new Error('Failed to approve user');
+    }
+    
+    const result = await response.json();
+    
+    // Show success message
+    statusDiv.innerHTML = '<p style="color: #27ae60;">✅ User approved successfully! Email notification sent.</p>';
+    
+    // Refresh the list after a short delay
+    setTimeout(() => {
+      showAdminDashboard();
+    }, 1500);
+    
   } catch (error) {
     console.error('Error approving user:', error);
+    document.getElementById('admin-status').innerHTML = '<p style="color: #e74c3c;">❌ Error approving user</p>';
+  }
+}
+
+async function checkPendingUsers() {
+  try {
+    const response = await fetch(`${API_BASE}/users/pending`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (response.ok) {
+      const pendingUsers = await response.json();
+      const badge = document.getElementById('admin-notification-badge');
+      
+      if (pendingUsers.length > 0) {
+        badge.textContent = pendingUsers.length;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  } catch (error) {
+    console.error('Error checking pending users:', error);
   }
 }
 
 async function rejectUser(userId) {
-  if (confirm('Are you sure you want to reject this user?')) {
+  const userEmail = document.querySelector(`[onclick="rejectUser(${userId})"]`).closest('li').querySelector('div div div').textContent;
+  
+  const confirmed = confirm(`Are you sure you want to reject ${userEmail}?\n\nThis will:\n• Delete their account\n• Send them a rejection email\n• Remove them from the system\n\nThis action cannot be undone.`);
+  
+  if (confirmed) {
     try {
-      await fetch(`${API_BASE}/users/${userId}/reject`, {
+      const statusDiv = document.getElementById('admin-status');
+      statusDiv.innerHTML = '<p style="color: #666;">Rejecting user...</p>';
+      
+      const response = await fetch(`${API_BASE}/users/${userId}/reject`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
-      showAdminDashboard(); // Refresh the list
+      
+      if (!response.ok) {
+        throw new Error('Failed to reject user');
+      }
+      
+      const result = await response.json();
+      
+      // Show success message
+      statusDiv.innerHTML = '<p style="color: #e74c3c;">❌ User rejected successfully! Email notification sent.</p>';
+      
+      // Refresh the list after a short delay
+      setTimeout(() => {
+        showAdminDashboard();
+      }, 1500);
+      
     } catch (error) {
       console.error('Error rejecting user:', error);
+      document.getElementById('admin-status').innerHTML = '<p style="color: #e74c3c;">❌ Error rejecting user</p>';
     }
   }
 }
