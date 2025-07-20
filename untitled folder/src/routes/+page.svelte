@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import parseGedcom from 'parse-gedcom';
+import { parse } from 'parse-gedcom';
 
 let step = 1; // 1: GEDCOM, 2: CSV, 3: Matching
 let gedcomResult: any = null;
@@ -23,7 +23,7 @@ function handleGEDCOMUpload(event: Event) {
     reader.onload = (e) => {
         try {
             const text = e.target?.result as string;
-            gedcomResult = parseGedcom(text);
+            gedcomResult = parse(text);
             step = 2;
         } catch (err) {
             gedcomError = 'Error parsing GEDCOM: ' + err;
@@ -318,12 +318,9 @@ function handleHighlight(id: string | null) {
     <section>
         <!-- Progress Bar -->
         {#if confirmedMatches.length > 0}
-            { 
-                // Calculate progress
-                const processed = confirmedMatches.filter(m => m.status !== 'pending').length;
-                const total = confirmedMatches.length;
-                const percent = Math.round((processed / total) * 100);
-            }
+            {@const processed = confirmedMatches.filter(m => m.status !== 'pending').length}
+            {@const total = confirmedMatches.length}
+            {@const percent = Math.round((processed / total) * 100)}
             <div style="margin-bottom:1em; width:100%; max-width:500px;">
                 <div style="background:#eee; border-radius:8px; height:24px; overflow:hidden;">
                     <div style="background:#1976d2; height:100%; width:{percent}%; transition:width 0.3s; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">
@@ -365,7 +362,7 @@ function handleHighlight(id: string | null) {
                             <button on:click={() => confirmMatch(idx, result.match)}>Confirm</button>
                             <button on:click={() => rejectMatch(idx)}>Reject</button>
                             <button on:click={() => skipMatch(idx)}>Skip</button>
-                            <button on:mouseover={() => handleHighlight(result.match.id)} on:mouseleave={() => handleHighlight(null)}>Highlight in Tree</button>
+                            <button on:mouseover={() => handleHighlight(result.match.id)} on:mouseleave={() => handleHighlight(null)} on:focus={() => handleHighlight(result.match.id)} on:blur={() => handleHighlight(null)}>Highlight in Tree</button>
                         {:else if result.status === 'ambiguous-dob' || result.status === 'ambiguous-name'}
                             <span style="color:red;">Ambiguous match: {result.candidates.length} candidates</span>
                             <ul>
@@ -373,7 +370,7 @@ function handleHighlight(id: string | null) {
                                     <li>
                                         {candidate.fullName || (candidate.given + ' ' + candidate.surname)} (DOB: {candidate.birthDate})
                                         <button on:click={() => confirmMatch(idx, candidate)}>Select</button>
-                                        <button on:mouseover={() => handleHighlight(candidate.id)} on:mouseleave={() => handleHighlight(null)}>Highlight in Tree</button>
+                                        <button on:mouseover={() => handleHighlight(candidate.id)} on:mouseleave={() => handleHighlight(null)} on:focus={() => handleHighlight(candidate.id)} on:blur={() => handleHighlight(null)}>Highlight in Tree</button>
                                     </li>
                                 {/each}
                             </ul>
