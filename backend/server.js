@@ -68,13 +68,11 @@ async function sendNewUserNotification(userEmail) {
 
 // CORS configuration for production
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        process.env.FRONTEND_URL || 'https://your-frontend.vercel.app',
-        'https://blackfamily.vercel.app',
-        'https://blackfamily-k92rbe7i5-colby-blacks-projects.vercel.app'
-      ] 
-    : true,
+  origin: [
+    'https://teotauy.github.io',
+    'https://blackfamily.vercel.app',
+    'https://blackfamily-k92rbe7i5-colby-blacks-projects.vercel.app'
+  ],
   credentials: true,
   optionsSuccessStatus: 200
 };
