@@ -4,6 +4,10 @@ import { onMount } from 'svelte';
 let step = 1; // 1: Welcome, 2: CSV, 3: Demo
 let csvResult: any[] = [];
 let csvError: string = '';
+let uploadStatus: string = '';
+let isUploading: boolean = false;
+
+const BACKEND_URL = 'https://blackfamily-production.up.railway.app';
 
 function handleCSVUpload(event: Event) {
     csvError = '';
@@ -36,10 +40,55 @@ function handleCSVUpload(event: Event) {
 
 
 
+async function uploadToBackend() {
+    if (csvResult.length === 0) {
+        uploadStatus = 'No data to upload';
+        return;
+    }
+    
+    isUploading = true;
+    uploadStatus = 'Uploading...';
+    
+    try {
+        // Convert CSV data to the format your backend expects
+        const peopleData = csvResult.map(row => ({
+            name: `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim(),
+            birthDate: row['DOB'] || row['Birth Date'] || '',
+            contact_email: row['Email'] || '',
+            contact_phone: row['Phone'] || '',
+            bio: `Imported from CSV: ${row['Notes'] || ''}`
+        }));
+        
+        // Upload each person to the backend
+        for (const person of peopleData) {
+            const response = await fetch(`${BACKEND_URL}/api/people`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer your-token-here' // You'll need to add authentication
+                },
+                body: JSON.stringify(person)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to upload: ${response.statusText}`);
+            }
+        }
+        
+        uploadStatus = `Successfully uploaded ${peopleData.length} people!`;
+    } catch (error) {
+        uploadStatus = `Upload failed: ${error.message}`;
+        console.error('Upload error:', error);
+    } finally {
+        isUploading = false;
+    }
+}
+
 function resetOnboarding() {
     step = 1;
     csvResult = [];
     csvError = '';
+    uploadStatus = '';
 }
 </script>
 
@@ -106,9 +155,30 @@ function resetOnboarding() {
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Upload Section -->
+            <div style="margin-top:2em;padding:1em;background:#f9f9f9;border-radius:8px;">
+                <h4>Upload to Database</h4>
+                <p>Upload these {csvResult.length} contacts to your family tree database:</p>
+                
+                <button 
+                    on:click={uploadToBackend}
+                    disabled={isUploading}
+                    style="background:#1976d2;color:white;padding:12px 24px;border:none;border-radius:4px;cursor:pointer;font-size:16px;margin-right:1em;"
+                >
+                    {isUploading ? 'Uploading...' : 'Upload to Database'}
+                </button>
+                
+                {#if uploadStatus}
+                    <p style="margin-top:1em;color:{uploadStatus.includes('Successfully') ? 'green' : uploadStatus.includes('failed') ? 'red' : '#666'};">
+                        {uploadStatus}
+                    </p>
+                {/if}
+            </div>
         {/if}
+        
         <p style="margin-top:2em;color:#888;">
-            This is a simplified demo. The full app will include GEDCOM parsing and family tree visualization.
+            This app can now upload CSV data to your Railway backend database!
         </p>
     </section>
 {/if}
