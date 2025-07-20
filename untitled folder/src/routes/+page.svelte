@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 
-let step = 1; // 1: Welcome, 2: Login, 3: CSV, 4: Demo
+let step = 1; // 1: Welcome, 2: Login, 3: CSV, 4: Demo, 5: View Data
 let csvResult: any[] = [];
 let csvError: string = '';
 let uploadStatus: string = '';
@@ -13,6 +13,11 @@ let password: string = '';
 let authToken: string = '';
 let isLoggedIn: boolean = false;
 let loginError: string = '';
+
+// Data viewing state
+let uploadedPeople: any[] = [];
+let isLoadingData: boolean = false;
+let dataError: string = '';
 
 const BACKEND_URL = 'https://blackfamily-production.up.railway.app';
 
@@ -117,6 +122,29 @@ async function uploadToBackend() {
     }
 }
 
+async function loadUploadedData() {
+    isLoadingData = true;
+    dataError = '';
+    
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/people`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            uploadedPeople = await response.json();
+        } else {
+            dataError = 'Failed to load data: ' + response.statusText;
+        }
+    } catch (error) {
+        dataError = 'Network error: ' + error.message;
+    } finally {
+        isLoadingData = false;
+    }
+}
+
 function resetOnboarding() {
     step = 1;
     csvResult = [];
@@ -127,6 +155,9 @@ function resetOnboarding() {
     authToken = '';
     isLoggedIn = false;
     loginError = '';
+    uploadedPeople = [];
+    isLoadingData = false;
+    dataError = '';
 }
 </script>
 
@@ -138,6 +169,7 @@ function resetOnboarding() {
         <li style="font-weight:{step===2?'bold':'normal'};color:{step===2?'#1976d2':'#888'}">2. Login</li>
         <li style="font-weight:{step===3?'bold':'normal'};color:{step===3?'#1976d2':'#888'}">3. CSV Upload</li>
         <li style="font-weight:{step===4?'bold':'normal'};color:{step===4?'#1976d2':'#888'}">4. Demo</li>
+        <li style="font-weight:{step===5?'bold':'normal'};color:{step===5?'#1976d2':'#888'}">5. View Data</li>
     </ol>
     <button on:click={resetOnboarding} style="margin-top:1em;">Restart</button>
 </nav>
@@ -268,5 +300,74 @@ function resetOnboarding() {
         <p style="margin-top:2em;color:#888;">
             This app can now upload CSV data to your Railway backend database!
         </p>
+        
+        <!-- View Data Button -->
+        <div style="margin-top:2em;padding:1em;background:#f0f8ff;border-radius:8px;">
+            <h4>View Your Uploaded Data</h4>
+            <p>See all the people you've uploaded to your database:</p>
+            <button 
+                on:click={() => { loadUploadedData(); step = 5; }}
+                style="background:#28a745;color:white;padding:12px 24px;border:none;border-radius:4px;cursor:pointer;font-size:16px;"
+            >
+                View All People
+            </button>
+        </div>
+    </section>
+{/if}
+
+{#if step === 5}
+    <section>
+        <h2>Your Family Tree Database</h2>
+        <p>Here are all the people in your database:</p>
+        
+        {#if isLoadingData}
+            <p>Loading your data...</p>
+        {:else if dataError}
+            <p style="color:red;">{dataError}</p>
+            <button on:click={loadUploadedData} style="background:#1976d2;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">
+                Try Again
+            </button>
+        {:else if uploadedPeople.length > 0}
+            <div style="margin-top:1em;">
+                <h3>Total People: {uploadedPeople.length}</h3>
+                <div style="max-height:600px;overflow-y:auto;border:1px solid #ccc;padding:1em;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f5f5f5;">
+                                <th style="padding:8px;border:1px solid #ddd;text-align:left;">ID</th>
+                                <th style="padding:8px;border:1px solid #ddd;text-align:left;">Name</th>
+                                <th style="padding:8px;border:1px solid #ddd;text-align:left;">Birth Date</th>
+                                <th style="padding:8px;border:1px solid #ddd;text-align:left;">Email</th>
+                                <th style="padding:8px;border:1px solid #ddd;text-align:left;">Phone</th>
+                                <th style="padding:8px;border:1px solid #ddd;text-align:left;">Bio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each uploadedPeople as person}
+                                <tr>
+                                    <td style="padding:8px;border:1px solid #ddd;">{person.id}</td>
+                                    <td style="padding:8px;border:1px solid #ddd;">{person.name}</td>
+                                    <td style="padding:8px;border:1px solid #ddd;">{person.birthDate || '-'}</td>
+                                    <td style="padding:8px;border:1px solid #ddd;">{person.contact_email || '-'}</td>
+                                    <td style="padding:8px;border:1px solid #ddd;">{person.contact_phone || '-'}</td>
+                                    <td style="padding:8px;border:1px solid #ddd;max-width:200px;overflow:hidden;text-overflow:ellipsis;">{person.bio || '-'}</td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {:else}
+            <p>No people found in your database. Try uploading some CSV data first!</p>
+        {/if}
+        
+        <div style="margin-top:2em;">
+            <button on:click={() => step = 3} style="background:#1976d2;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;margin-right:1em;">
+                Upload More Data
+            </button>
+            <button on:click={() => step = 4} style="background:#6c757d;color:white;padding:10px 20px;border:none;border-radius:4px;cursor:pointer;">
+                Back to Demo
+            </button>
+        </div>
     </section>
 {/if}
