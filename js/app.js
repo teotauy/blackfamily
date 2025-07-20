@@ -788,6 +788,7 @@ async function updatePersonRelationships(personId, newParentIds, newChildIds, ne
 }
 
 async function uploadToBackend() {
+    console.log('uploadToBackend called');
     const fileInput = document.getElementById('csv-file');
     const errorDiv = document.getElementById('csv-error');
     const successDiv = document.getElementById('csv-success');
