@@ -11,7 +11,7 @@ let csvData = [];
 
 // --- Onboarding Functions ---
 function nextStep() {
-    if (currentStep < 4) {
+    if (currentStep < 2) {
         currentStep++;
         showStep(currentStep);
     }
@@ -251,7 +251,11 @@ async function uploadToBackend() {
         
         successDiv.textContent = `Successfully uploaded ${peopleData.length} people!`;
         errorDiv.textContent = '';
-        nextStep();
+        
+        // Go directly to the main app instead of next step
+        setTimeout(() => {
+            completeOnboarding();
+        }, 1500);
     } catch (error) {
         errorDiv.textContent = `Upload failed: ${error.message}`;
         successDiv.textContent = '';
