@@ -786,3 +786,17 @@ async function updatePersonRelationships(personId, newParentIds, newChildIds, ne
     
     // No need to call setLocalStorageData or addRelationshipAPI here, as they are fetch-based
 }
+
+// Ensure password gate is shown on page load
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is already authenticated
+    const isAuthenticated = sessionStorage.getItem('familyAccessGranted');
+    if (isAuthenticated) {
+        // User already entered password, show app
+        showFamilyApp();
+    } else {
+        // Show password gate
+        showPasswordGate();
+    }
+});
