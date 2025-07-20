@@ -108,7 +108,8 @@ db.serialize(() => {
     contact_street TEXT,
     contact_city TEXT,
     contact_state TEXT,
-    contact_zip TEXT
+    contact_zip TEXT,
+    occupation TEXT
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS relationships (
@@ -440,9 +441,9 @@ app.get('/api/people/:id', (req, res) => {
 // Add a new person
 app.post('/api/people', (req, res) => {
   const p = req.body;
-  db.run(`INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [p.name, p.birthDate, p.deathDate, p.pronouns, p.bio, p.notes, p.contact?.email, p.contact?.phone, p.contact?.street, p.contact?.city, p.contact?.state, p.contact?.zip],
+  db.run(`INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, occupation)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [p.name, p.birthDate, p.deathDate, p.pronouns, p.bio, p.notes, p.contact?.email, p.contact?.phone, p.contact?.street, p.contact?.city, p.contact?.state, p.contact?.zip, p.occupation],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID });
@@ -453,8 +454,8 @@ app.post('/api/people', (req, res) => {
 app.put('/api/people/:id', (req, res) => {
   const id = req.params.id;
   const p = req.body;
-  db.run(`UPDATE people SET name=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=? WHERE id=?`,
-    [p.name, p.birthDate, p.deathDate, p.pronouns, p.bio, p.notes, p.contact?.email, p.contact?.phone, p.contact?.street, p.contact?.city, p.contact?.state, p.contact?.zip, id],
+  db.run(`UPDATE people SET name=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=?, occupation=? WHERE id=?`,
+    [p.name, p.birthDate, p.deathDate, p.pronouns, p.bio, p.notes, p.contact?.email, p.contact?.phone, p.contact?.street, p.contact?.city, p.contact?.state, p.contact?.zip, p.occupation, id],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ changes: this.changes });
