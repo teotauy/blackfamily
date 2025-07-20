@@ -419,7 +419,7 @@ function treeAuth(req, res, next) {
 // --- API Endpoints ---
 
 // Get all people
-app.get('/api/people', treeAuth, (req, res) => {
+app.get('/api/people', (req, res) => {
   db.all('SELECT * FROM people', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
