@@ -787,6 +787,50 @@ async function updatePersonRelationships(personId, newParentIds, newChildIds, ne
     // No need to call setLocalStorageData or addRelationshipAPI here, as they are fetch-based
 }
 
+async function uploadToBackend() {
+    const fileInput = document.getElementById('csv-file');
+    const errorDiv = document.getElementById('csv-error');
+    const successDiv = document.getElementById('csv-success');
+    if (!fileInput.files.length) {
+        errorDiv.textContent = 'Please select a CSV file.';
+        return;
+    }
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            // Parse CSV (simple split, for demo)
+            const csv = e.target.result;
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const rows = lines.slice(1).filter(line => line.trim()).map(line => {
+                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index] || '';
+                });
+                return row;
+            });
+
+            // Send to backend (adjust endpoint as needed)
+            const response = await fetch('https://blackfamily-production.up.railway.app/api/people/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(rows)
+            });
+
+            if (!response.ok) throw new Error('Failed to upload data');
+            successDiv.textContent = 'Data uploaded successfully!';
+            errorDiv.textContent = '';
+            // Optionally reload data here
+        } catch (error) {
+            errorDiv.textContent = 'Upload failed: ' + error.message;
+            successDiv.textContent = '';
+        }
+    };
+    reader.readAsText(file);
+}
+
 // Ensure password gate is shown on page load
 
 document.addEventListener('DOMContentLoaded', function() {
