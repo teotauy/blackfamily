@@ -890,3 +890,53 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 window.uploadToBackend = uploadToBackend;
+
+// CSV Template Download Function
+function downloadCSVTemplate() {
+    const headers = [
+        'First Name',
+        'Last Name', 
+        'Maiden',
+        'DOB',
+        'Pronouns',
+        'Phone',
+        'Can receive',
+        'Street',
+        'City',
+        'State',
+        'ZIP',
+        'Email'
+    ];
+    
+    const sampleData = [
+        'John',
+        'Doe',
+        '',
+        '1990-01-15',
+        'he/him',
+        '555-123-4567',
+        'Yes',
+        '123 Main Street',
+        'Anytown',
+        'CA',
+        '12345',
+        'john.doe@email.com'
+    ];
+    
+    const csvContent = [
+        headers.join(','),
+        sampleData.join(',')
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'family_tree_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+window.downloadCSVTemplate = downloadCSVTemplate;
