@@ -321,8 +321,19 @@ let familyData = [];
 
 // --- Auth Functions ---
 function showAuthModal() {
-  document.getElementById('auth-modal').style.display = 'block';
-  showLoginForm();
+  const authModal = document.getElementById('auth-modal');
+  if (authModal) {
+    authModal.style.display = 'flex';
+  } else {
+    console.warn('auth-modal element is missing from the HTML.');
+    return;
+  }
+  const closeBtn = document.getElementById('close-auth-modal');
+  if (closeBtn) {
+    closeBtn.onclick = hideAuthModal;
+  } else {
+    console.warn('close-auth-modal element is missing from the HTML.');
+  }
 }
 
 function hideAuthModal() {
@@ -740,48 +751,12 @@ function displayRandomFact() {
 }
 
 function setupAuthEventListeners() {
-    // Auth modal events
-    document.getElementById('close-auth-modal').onclick = hideAuthModal;
-    document.getElementById('toggle-auth-mode').onclick = (e) => {
-        e.preventDefault();
-        if (document.getElementById('login-form').style.display === 'none') {
-            showLoginForm();
-        } else {
-            showRegisterForm();
-        }
-    };
-    
-    // Login form
-    document.getElementById('login-form').onsubmit = (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        login(email, password);
-    };
-    
-    // Register form
-    document.getElementById('register-form').onsubmit = (e) => {
-        e.preventDefault();
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        register(email, password);
-    };
-    
-    // Logout button
-    document.getElementById('logout-btn').onclick = logout;
-    
-    // Admin modal events
-    document.getElementById('close-admin-modal').onclick = () => {
-        document.getElementById('admin-modal').style.display = 'none';
-    };
-    
-    // Close modals when clicking outside
-    window.onclick = (event) => {
-        const authModal = document.getElementById('auth-modal');
-        const adminModal = document.getElementById('admin-modal');
-        if (event.target === authModal) hideAuthModal();
-        if (event.target === adminModal) adminModal.style.display = 'none';
-    };
+    const closeBtn = document.getElementById('close-auth-modal');
+    if (closeBtn) {
+        closeBtn.onclick = hideAuthModal;
+    } else {
+        console.warn('close-auth-modal element is missing from the HTML.');
+    }
 }
 
 // Setup all the app event listeners (only called after successful login)
