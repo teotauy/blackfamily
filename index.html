@@ -49,37 +49,38 @@
             <button id="family-email-blast-button" type="button" style="margin-left: 10px;" onclick="showFamilyBlastModal('email')">📧 Family Email Blast</button>
         </div>
 
-        <div id="search-section-container">
-            <input type="search" id="family-search" placeholder="Search family members...">
-        </div>
+        <!-- Main App UI (restored) -->
+        <div id="main-app-container">
+          <!-- Random Fact Display -->
+          <div id="random-fact-display" style="margin: 20px 0;"></div>
 
-        <div id="relationship-finder-container">
-            <h2>Relationship Finder</h2>
-            <form id="relationship-form">
-                <div class="person-selector-group">
-                    <label for="person1-select">Person 1:</label>
-                    <select id="person1-select" required>
-                        <option value="">Select first person...</option>
-                    </select>
-                </div>
-                <div class="person-selector-group">
-                    <label for="person2-select">Person 2:</label>
-                    <select id="person2-select" required>
-                        <option value="">Select second person...</option>
-                    </select>
-                </div>
-                <button type="submit">Calculate Relationship</button>
+          <!-- Add Person Modal -->
+          <div id="add-person-modal" style="display: none;">
+            <form id="add-person-form">
+              <input id="add-parents-input" placeholder="Add parents...">
+              <input id="add-children-input" placeholder="Add children...">
+              <input id="add-spouse-input" placeholder="Add spouse...">
+              <button type="submit">Add Person</button>
             </form>
+          </div>
+
+          <!-- Family Search -->
+          <input id="family-search-input" placeholder="Search family...">
+          <div id="family-search-results"></div>
+
+          <!-- Family Tree Visualization -->
+          <div id="tree-container"></div>
+
+          <!-- Relationship Finder -->
+          <div id="relationship-finder-container">
+            <input id="person1-relationship-input" placeholder="Person 1">
+            <input id="person2-relationship-input" placeholder="Person 2">
+            <button id="calculate-relationship-button">Calculate Relationship</button>
             <div id="relationship-result"></div>
+          </div>
         </div>
 
-        <main>
-            <div id="tree-container">
-                <h2>Family Tree Visualization</h2>
-                <!-- Family tree will be rendered here -->
-            </div>
-
-            <div id="details-container">
+        <div id="details-container">
                 <div id="person-info">
                     <div style="text-align: center; padding: 40px 20px; color: #666;">
                         <h3>👤 No Person Selected</h3>
