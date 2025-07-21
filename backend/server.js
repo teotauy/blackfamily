@@ -443,7 +443,7 @@ app.post('/api/people', (req, res) => {
   const p = req.body;
   db.run(`INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, occupation)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [p.name, p.birthDate, p.deathDate, p.pronouns, p.bio, p.notes, p.contact?.email, p.contact?.phone, p.contact?.street, p.contact?.city, p.contact?.state, p.contact?.zip, p.occupation],
+    [p.name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.occupation],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID });
@@ -455,7 +455,7 @@ app.put('/api/people/:id', (req, res) => {
   const id = req.params.id;
   const p = req.body;
   db.run(`UPDATE people SET name=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=?, occupation=? WHERE id=?`,
-    [p.name, p.birthDate, p.deathDate, p.pronouns, p.bio, p.notes, p.contact?.email, p.contact?.phone, p.contact?.street, p.contact?.city, p.contact?.state, p.contact?.zip, p.occupation, id],
+    [p.name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.occupation, id],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ changes: this.changes });
