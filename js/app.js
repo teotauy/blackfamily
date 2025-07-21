@@ -810,9 +810,31 @@ async function uploadToBackend() {
                 headers.forEach((header, index) => {
                     row[header] = values[index] || '';
                 });
-                return row;
+                
+                // Map common CSV field names to backend expected names
+                const mappedRow = {
+                    name: row.name || row.Name || row.NAME || row['Full Name'] || row['Full name'] || '',
+                    birth_date: row.birth_date || row.birthDate || row['Birth Date'] || row['Birth date'] || row.birth || row.Birth || '',
+                    death_date: row.death_date || row.deathDate || row['Death Date'] || row['Death date'] || row.death || row.Death || '',
+                    pronouns: row.pronouns || row.Pronouns || row['Preferred Pronouns'] || '',
+                    bio: row.bio || row.Bio || row.biography || row.Biography || row['Bio'] || '',
+                    notes: row.notes || row.Notes || row['Notes'] || '',
+                    contact_email: row.contact_email || row.email || row.Email || row['Email'] || row['E-mail'] || '',
+                    contact_phone: row.contact_phone || row.phone || row.Phone || row['Phone'] || row['Phone Number'] || '',
+                    contact_street: row.contact_street || row.street || row.Street || row.address || row.Address || row['Street Address'] || '',
+                    contact_city: row.contact_city || row.city || row.City || row['City'] || '',
+                    contact_state: row.contact_state || row.state || row.State || row['State'] || '',
+                    contact_zip: row.contact_zip || row.zip || row.zipcode || row.Zip || row['Zip Code'] || row['ZIP'] || '',
+                    occupation: row.occupation || row.Occupation || row.job || row.Job || row['Job Title'] || ''
+                };
+                
+                return mappedRow;
             });
 
+            // Debug: Log the first row to see field names
+            console.log('CSV Headers:', headers);
+            console.log('First row data:', rows[0]);
+            
             // Send to backend (adjust endpoint as needed)
             const response = await fetch('https://blackfamily-production.up.railway.app/api/people/bulk', {
                 method: 'POST',
