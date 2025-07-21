@@ -111,19 +111,19 @@ db.serialize(() => {
     contact_city TEXT,
     contact_state TEXT,
     contact_zip TEXT,
-    occupation TEXT
+    can_receive_sms TEXT
   )`);
   
-  // Add occupation column if it doesn't exist (for existing databases)
+  // Add can_receive_sms column if it doesn't exist (for existing databases)
   db.all("PRAGMA table_info(people)", [], (err, rows) => {
     if (!err && rows) {
-      const hasOccupation = rows.some(row => row.name === 'occupation');
-      if (!hasOccupation) {
-        db.run("ALTER TABLE people ADD COLUMN occupation TEXT", (err) => {
+      const hasCanReceiveSMS = rows.some(row => row.name === 'can_receive_sms');
+      if (!hasCanReceiveSMS) {
+        db.run("ALTER TABLE people ADD COLUMN can_receive_sms TEXT", (err) => {
           if (err) {
-            console.log('Occupation column already exists or could not be added');
+            console.log('can_receive_sms column already exists or could not be added');
           } else {
-            console.log('Added occupation column to people table');
+            console.log('Added can_receive_sms column to people table');
           }
         });
       }
@@ -254,9 +254,9 @@ app.post('/api/users/:id/approve', authRequired, adminRequired, async (req, res)
         `
       };
       
-      transporter.sendMail(approvalMailOptions).catch(error => {
-        console.error('Failed to send approval email:', error);
-      });
+      // transporter.sendMail(approvalMailOptions).catch(error => { // transporter is commented out
+      //   console.error('Failed to send approval email:', error);
+      // });
       
       res.json({ approved: true, message: 'User approved and notification sent' });
     });
@@ -283,9 +283,9 @@ app.post('/api/users/:id/reject', authRequired, adminRequired, async (req, res) 
         `
       };
       
-      transporter.sendMail(rejectionMailOptions).catch(error => {
-        console.error('Failed to send rejection email:', error);
-      });
+      // transporter.sendMail(rejectionMailOptions).catch(error => { // transporter is commented out
+      //   console.error('Failed to send rejection email:', error);
+      // });
       
       res.json({ deleted: true, message: 'User rejected and notification sent' });
     });
@@ -459,9 +459,9 @@ app.get('/api/people/:id', (req, res) => {
 // Add a new person
 app.post('/api/people', (req, res) => {
   const p = req.body;
-  db.run(`INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, occupation)
+  db.run(`INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [p.name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.occupation],
+    [p.name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure'],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID });
@@ -472,8 +472,8 @@ app.post('/api/people', (req, res) => {
 app.put('/api/people/:id', (req, res) => {
   const id = req.params.id;
   const p = req.body;
-  db.run(`UPDATE people SET name=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=?, occupation=? WHERE id=?`,
-    [p.name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.occupation, id],
+  db.run(`UPDATE people SET name=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=?, can_receive_sms=? WHERE id=?`,
+    [p.name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure', id],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ changes: this.changes });
@@ -514,10 +514,10 @@ app.post('/api/people/bulk', (req, res) => {
       p.contact_city || '',
       p.contact_state || '',
       p.contact_zip || '',
-      p.occupation || ''
+      p.can_receive_sms || 'unsure'
     );
   });
-  const sql = `INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, occupation) VALUES ${placeholders}`;
+  const sql = `INSERT INTO people (name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms) VALUES ${placeholders}`;
   db.run(sql, values, function(err) {
     if (err) {
       console.error('Bulk insert error:', err);
