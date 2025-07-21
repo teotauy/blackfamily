@@ -517,7 +517,7 @@ async function handleAddPersonFormSubmit(event) {
     
     const formData = new FormData(event.target);
     const personData = {
-        name: formData.get('name'),
+        name: (formData.get('first_name') || '') + ' ' + (formData.get('last_name') || ''),
         birth_date: formData.get('birth_date'),
         death_date: formData.get('death_date') || null,
         gender: formData.get('gender'),
