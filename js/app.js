@@ -813,18 +813,18 @@ async function uploadToBackend() {
                 
                 // Map common CSV field names to backend expected names
                 const mappedRow = {
-                    name: row.name || row.Name || row.NAME || row['Full Name'] || row['Full name'] || '',
-                    birth_date: row.birth_date || row.birthDate || row['Birth Date'] || row['Birth date'] || row.birth || row.Birth || '',
+                    name: (row['First Name'] || row['first name'] || row['FirstName'] || '') + ' ' + (row['Last Name'] || row['last name'] || row['LastName'] || ''),
+                    birth_date: row.DOB || row.dob || row['Date of Birth'] || row['Birth Date'] || row['Birth date'] || row.birth_date || row.birthDate || row.birth || row.Birth || '',
                     death_date: row.death_date || row.deathDate || row['Death Date'] || row['Death date'] || row.death || row.Death || '',
-                    pronouns: row.pronouns || row.Pronouns || row['Preferred Pronouns'] || '',
+                    pronouns: row.Pronouns || row.pronouns || row['Preferred Pronouns'] || '',
                     bio: row.bio || row.Bio || row.biography || row.Biography || row['Bio'] || '',
                     notes: row.notes || row.Notes || row['Notes'] || '',
-                    contact_email: row.contact_email || row.email || row.Email || row['Email'] || row['E-mail'] || '',
-                    contact_phone: row.contact_phone || row.phone || row.Phone || row['Phone'] || row['Phone Number'] || '',
-                    contact_street: row.contact_street || row.street || row.Street || row.address || row.Address || row['Street Address'] || '',
-                    contact_city: row.contact_city || row.city || row.City || row['City'] || '',
-                    contact_state: row.contact_state || row.state || row.State || row['State'] || '',
-                    contact_zip: row.contact_zip || row.zip || row.zipcode || row.Zip || row['Zip Code'] || row['ZIP'] || '',
+                    contact_email: row.Email || row.email || row['E-mail'] || row.contact_email || '',
+                    contact_phone: row.Phone || row.phone || row['Phone Number'] || row.contact_phone || '',
+                    contact_street: row.Street || row.street || row['Street Address'] || row.address || row.Address || row.contact_street || '',
+                    contact_city: row.City || row.city || row.contact_city || '',
+                    contact_state: row.State || row.state || row.contact_state || '',
+                    contact_zip: row.ZIP || row.zip || row.zipcode || row.Zip || row['Zip Code'] || row.contact_zip || '',
                     occupation: row.occupation || row.Occupation || row.job || row.Job || row['Job Title'] || ''
                 };
                 
