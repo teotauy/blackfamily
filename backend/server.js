@@ -100,7 +100,9 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS people (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    middle_name TEXT,
     maiden_name TEXT,
+    nickname TEXT,
     birthDate TEXT,
     deathDate TEXT,
     pronouns TEXT,
@@ -115,9 +117,19 @@ db.serialize(() => {
     can_receive_sms TEXT
   )`);
   
-  // Add maiden_name column if it doesn't exist (for existing databases)
+  // Add middle_name, maiden_name, nickname columns if they don't exist (for existing databases)
   db.all("PRAGMA table_info(people)", [], (err, rows) => {
     if (!err && rows) {
+      const hasMiddleName = rows.some(row => row.name === 'middle_name');
+      if (!hasMiddleName) {
+        db.run("ALTER TABLE people ADD COLUMN middle_name TEXT", (err) => {
+          if (err) {
+            console.log('middle_name column already exists or could not be added');
+          } else {
+            console.log('Added middle_name column to people table');
+          }
+        });
+      }
       const hasMaidenName = rows.some(row => row.name === 'maiden_name');
       if (!hasMaidenName) {
         db.run("ALTER TABLE people ADD COLUMN maiden_name TEXT", (err) => {
@@ -125,6 +137,16 @@ db.serialize(() => {
             console.log('maiden_name column already exists or could not be added');
           } else {
             console.log('Added maiden_name column to people table');
+          }
+        });
+      }
+      const hasNickname = rows.some(row => row.name === 'nickname');
+      if (!hasNickname) {
+        db.run("ALTER TABLE people ADD COLUMN nickname TEXT", (err) => {
+          if (err) {
+            console.log('nickname column already exists or could not be added');
+          } else {
+            console.log('Added nickname column to people table');
           }
         });
       }
@@ -460,9 +482,9 @@ app.get('/api/people/:id', (req, res) => {
 // Add a new person
 app.post('/api/people', (req, res) => {
   const p = req.body;
-  db.run(`INSERT INTO people (name, maiden_name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [p.name, p.maiden_name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure'],
+  db.run(`INSERT INTO people (name, middle_name, maiden_name, nickname, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [p.name, p.middle_name, p.maiden_name, p.nickname, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure'],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID });
@@ -473,8 +495,8 @@ app.post('/api/people', (req, res) => {
 app.put('/api/people/:id', (req, res) => {
   const id = req.params.id;
   const p = req.body;
-  db.run(`UPDATE people SET name=?, maiden_name=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=?, can_receive_sms=? WHERE id=?`,
-    [p.name, p.maiden_name, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure', id],
+  db.run(`UPDATE people SET name=?, middle_name=?, maiden_name=?, nickname=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=?, can_receive_sms=? WHERE id=?`,
+    [p.name, p.middle_name, p.maiden_name, p.nickname, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure', id],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ changes: this.changes });
@@ -499,12 +521,14 @@ app.post('/api/people/bulk', (req, res) => {
   if (!Array.isArray(people)) {
     return res.status(400).json({ error: 'Expected an array of people' });
   }
-  const placeholders = people.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+  const placeholders = people.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
   const values = [];
   people.forEach(p => {
     values.push(
       p.name || '',
+      p.middle_name || '',
       p.maiden_name || '',
+      p.nickname || '',
       p.birth_date || '',
       p.death_date || '',
       p.pronouns || '',
@@ -519,7 +543,7 @@ app.post('/api/people/bulk', (req, res) => {
       p.can_receive_sms || 'unsure'
     );
   });
-  const sql = `INSERT INTO people (name, maiden_name, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms) VALUES ${placeholders}`;
+  const sql = `INSERT INTO people (name, middle_name, maiden_name, nickname, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms) VALUES ${placeholders}`;
   db.run(sql, values, function(err) {
     if (err) {
       console.error('Bulk insert error:', err);
