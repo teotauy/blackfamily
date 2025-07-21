@@ -184,6 +184,21 @@ db.get('SELECT COUNT(*) as count FROM users', async (err, row) => {
   }
 });
 
+// --- TEMPORARY: Ensure admin access for colby@colbyangusblack.com on Railway ---
+bcrypt.hash('mywju8-Mitkow-jofvor', 10).then(hash => {
+  db.run(
+    "UPDATE users SET password_hash = ?, is_admin = 1, approved = 1 WHERE email = 'colby@colbyangusblack.com';",
+    [hash],
+    function(err) {
+      if (err) {
+        console.error('Failed to update admin user:', err);
+      } else {
+        console.log('Admin user updated/reset!');
+      }
+    }
+  );
+});
+
 // --- Auth Middleware ---
 function authRequired(req, res, next) {
   const auth = req.headers.authorization;
