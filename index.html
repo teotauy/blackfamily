@@ -39,7 +39,9 @@
             <h1>Family Tree</h1>
         </header>
 
-        <div id="actions-toolbar">
+        <main id="main-content" style="display:none;">
+          <div id="random-fact-display"></div>
+          <div id="actions-toolbar">
             <button id="add-person-button" type="button">Add Person</button>
             <button id="import-csv-button" type="button" style="margin-left: 10px; background: #17a2b8; color: white;">Import CSV</button>
             <button id="generate-holiday-card-pdf-button" type="button" style="margin-left: 10px;" onclick="generateHolidayCardPDF()">Generate Holiday Card Mailing Labels (PDF)</button>
@@ -47,54 +49,55 @@
             <button id="generate-birthday-list-pdf-button" type="button" style="margin-left: 10px;" onclick="generateBirthdayListPDF()">Generate Birthday List (PDF)</button>
             <button id="family-text-blast-button" type="button" style="margin-left: 10px;" onclick="showFamilyBlastModal('text')">📱 Family Text Blast</button>
             <button id="family-email-blast-button" type="button" style="margin-left: 10px;" onclick="showFamilyBlastModal('email')">📧 Family Email Blast</button>
-        </div>
-
-        <!-- Main App UI (restored) -->
-        <div id="main-app-container">
-          <!-- Random Fact Display -->
-          <div id="random-fact-display" style="margin: 20px 0;"></div>
-
-          <!-- Add Person Modal -->
-          <div id="add-person-modal" style="display: none;">
-            <form id="add-person-form">
-              <input id="add-parents-input" placeholder="Add parents...">
-              <input id="add-children-input" placeholder="Add children...">
-              <input id="add-spouse-input" placeholder="Add spouse...">
-              <button type="submit">Add Person</button>
-            </form>
           </div>
-
-          <!-- Family Search -->
-          <input id="family-search-input" placeholder="Search family...">
-          <div id="family-search-results"></div>
-
-          <!-- Family Tree Visualization -->
-          <div id="tree-container"></div>
-
-          <!-- Relationship Finder -->
+          <div id="search-section-container">
+            <input id="family-search-input" placeholder="Search family...">
+            <div id="family-search-results"></div>
+          </div>
           <div id="relationship-finder-container">
             <input id="person1-relationship-input" placeholder="Person 1">
+            <div id="person1-relationship-suggestions"></div>
+            <div id="selected-person1-display"></div>
             <input id="person2-relationship-input" placeholder="Person 2">
+            <div id="person2-relationship-suggestions"></div>
+            <div id="selected-person2-display"></div>
             <button id="calculate-relationship-button">Calculate Relationship</button>
             <div id="relationship-result"></div>
           </div>
-        </div>
-
-        <div id="details-container">
-                <div id="person-info">
-                    <div style="text-align: center; padding: 40px 20px; color: #666;">
-                        <h3>👤 No Person Selected</h3>
-                        <p>Click on anyone in the family tree to see their details here.</p>
-                    </div>
-                </div>
+          <div id="add-person-modal" style="display: none;">
+            <form id="add-person-form">
+              <input id="add-parents-input" placeholder="Add parents...">
+              <div id="add-parents-suggestions"></div>
+              <div id="selected-parents-list"></div>
+              <input id="add-parents-ids" type="hidden">
+              <input id="add-children-input" placeholder="Add children...">
+              <div id="add-children-suggestions"></div>
+              <div id="selected-children-list"></div>
+              <input id="add-children-ids" type="hidden">
+              <input id="add-spouse-input" placeholder="Add spouse...">
+              <div id="add-spouse-suggestions"></div>
+              <div id="selected-spouse-display"></div>
+              <input id="add-spouse-id-hidden" type="hidden">
+              <select id="add-pronouns"><option value="">Pronouns</option></select>
+              <input id="add-pronouns-custom" style="display:none;">
+              <button type="submit">Add Person</button>
+            </form>
+          </div>
+          <div id="tree-container"></div>
+          <div id="details-container">
+            <div id="person-info">
+              <div style="text-align: center; padding: 40px 20px; color: #666;">
+                <h3>👤 No Person Selected</h3>
+                <p>Click on anyone in the family tree to see their details here.</p>
+              </div>
             </div>
-
-            <div id="birthdays-section">
-                <h2>Upcoming Birthdays</h2>
-                <ul id="birthdays-list">
-                    <li>No birthdays soon.</li>
-                </ul>
-            </div>
+          </div>
+          <div id="birthdays-section">
+            <h2>Upcoming Birthdays</h2>
+            <ul id="birthdays-list">
+              <li>No birthdays soon.</li>
+            </ul>
+          </div>
         </main>
 
         <!-- Add Person Modal -->
