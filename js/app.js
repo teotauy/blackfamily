@@ -257,7 +257,12 @@ async function uploadToBackend() {
 
 function completeOnboarding() {
     // Hide onboarding overlay
-    document.getElementById('onboarding-overlay').style.display = 'none';
+    const onboardingOverlay = document.getElementById('onboarding-overlay');
+    if (onboardingOverlay) {
+      onboardingOverlay.style.display = 'none';
+    } else {
+      console.warn('onboarding-overlay element is missing from the HTML.');
+    }
     
     // Show the main family tree app
     document.getElementById('family-tree-app').style.display = 'block';
@@ -287,7 +292,12 @@ function downloadCSVTemplate() {
 
 function skipOnboarding() {
     // Hide onboarding overlay
-    document.getElementById('onboarding-overlay').style.display = 'none';
+    const onboardingOverlay = document.getElementById('onboarding-overlay');
+    if (onboardingOverlay) {
+      onboardingOverlay.style.display = 'none';
+    } else {
+      console.warn('onboarding-overlay element is missing from the HTML.');
+    }
     
     // Show the main family tree app
     document.getElementById('family-tree-app').style.display = 'block';
@@ -405,7 +415,7 @@ function updateUIForAuth() {
   const headerAuthSection = document.getElementById('header-auth-section');
   
   // Update header auth section
-  if (isLoggedIn) {
+  if (headerAuthSection) {
     headerAuthSection.innerHTML = `
       <div style="display: flex; align-items: center; gap: 10px;">
         <span style="color: #666; font-size: 14px;">Welcome, ${currentUser?.email || 'User'}!</span>
@@ -420,12 +430,7 @@ function updateUIForAuth() {
       document.getElementById('admin-btn').onclick = showAdminDashboard;
     }
   } else {
-    headerAuthSection.innerHTML = `
-      <button id="header-login-btn" style="padding: 12px 24px; background: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold;">🔐 Login to Family Tree</button>
-    `;
-    
-    // Attach login button event
-    document.getElementById('header-login-btn').onclick = showAuthModal;
+    console.warn('header-auth-section element is missing from the HTML.');
   }
   
   // Show/hide main app content
@@ -2770,8 +2775,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (hasCompletedOnboarding || existingAuthToken) {
         // Skip onboarding, show main app
-        document.getElementById('onboarding-overlay').style.display = 'none';
-        document.getElementById('family-tree-app').style.display = 'block';
+        const onboardingOverlay = document.getElementById('onboarding-overlay');
+        if (onboardingOverlay) {
+          onboardingOverlay.style.display = 'none';
+        } else {
+          console.warn('onboarding-overlay element is missing from the HTML.');
+        }
         
         if (existingAuthToken) {
             authToken = existingAuthToken;
@@ -2785,7 +2794,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } else {
         // Show onboarding for new users
-        document.getElementById('onboarding-overlay').style.display = 'flex';
+        const onboardingOverlay = document.getElementById('onboarding-overlay');
+        if (onboardingOverlay) {
+          onboardingOverlay.style.display = 'flex';
+        } else {
+          console.warn('onboarding-overlay element is missing from the HTML.');
+        }
+        
         document.getElementById('family-tree-app').style.display = 'none';
     }
     
@@ -2798,7 +2813,12 @@ function completeOnboarding() {
     localStorage.setItem('hasCompletedOnboarding', 'true');
     
     // Hide onboarding overlay
-    document.getElementById('onboarding-overlay').style.display = 'none';
+    const onboardingOverlay = document.getElementById('onboarding-overlay');
+    if (onboardingOverlay) {
+      onboardingOverlay.style.display = 'none';
+    } else {
+      console.warn('onboarding-overlay element is missing from the HTML.');
+    }
     
     // Show the main family tree app
     document.getElementById('family-tree-app').style.display = 'block';
