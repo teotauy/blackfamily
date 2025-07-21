@@ -71,7 +71,9 @@ const corsOptions = {
   origin: [
     'https://teotauy.github.io',
     'https://blackfamily.vercel.app',
-    'https://blackfamily-k92rbe7i5-colby-blacks-projects.vercel.app'
+    'https://blackfamily-k92rbe7i5-colby-blacks-projects.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173'
   ],
   credentials: true,
   optionsSuccessStatus: 200
