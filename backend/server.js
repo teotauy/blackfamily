@@ -184,19 +184,35 @@ db.get('SELECT COUNT(*) as count FROM users', async (err, row) => {
   }
 });
 
-// --- TEMPORARY: Ensure admin access for colby@colbyangusblack.com on Railway ---
+// --- TEMPORARY: Ensure admin access for colby@colbyangusblack.com on Railway (upsert) ---
 bcrypt.hash('mywju8-Mitkow-jofvor', 10).then(hash => {
-  db.run(
-    "UPDATE users SET password_hash = ?, is_admin = 1, approved = 1 WHERE email = 'colby@colbyangusblack.com';",
-    [hash],
-    function(err) {
-      if (err) {
-        console.error('Failed to update admin user:', err);
-      } else {
-        console.log('Admin user updated/reset!');
-      }
+  db.get("SELECT id FROM users WHERE email = 'colby@colbyangusblack.com'", (err, row) => {
+    if (row) {
+      db.run(
+        "UPDATE users SET password_hash = ?, is_admin = 1, approved = 1 WHERE email = 'colby@colbyangusblack.com';",
+        [hash],
+        function(err) {
+          if (err) {
+            console.error('Failed to update admin user:', err);
+          } else {
+            console.log('Admin user updated/reset!');
+          }
+        }
+      );
+    } else {
+      db.run(
+        "INSERT INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1);",
+        ['colby@colbyangusblack.com', hash],
+        function(err) {
+          if (err) {
+            console.error('Failed to insert admin user:', err);
+          } else {
+            console.log('Admin user inserted!');
+          }
+        }
+      );
     }
-  );
+  });
 });
 
 // --- Auth Middleware ---
