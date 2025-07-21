@@ -115,8 +115,8 @@ db.serialize(() => {
   )`);
   
   // Add occupation column if it doesn't exist (for existing databases)
-  db.run("PRAGMA table_info(people)", [], (err, rows) => {
-    if (!err) {
+  db.all("PRAGMA table_info(people)", [], (err, rows) => {
+    if (!err && rows) {
       const hasOccupation = rows.some(row => row.name === 'occupation');
       if (!hasOccupation) {
         db.run("ALTER TABLE people ADD COLUMN occupation TEXT", (err) => {
