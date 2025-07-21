@@ -751,12 +751,51 @@ function displayRandomFact() {
 }
 
 function setupAuthEventListeners() {
-    const closeBtn = document.getElementById('close-auth-modal');
-    if (closeBtn) {
-        closeBtn.onclick = hideAuthModal;
-    } else {
-        console.warn('close-auth-modal element is missing from the HTML.');
-    }
+  const closeBtn = document.getElementById('close-auth-modal');
+  if (closeBtn) {
+    closeBtn.onclick = hideAuthModal;
+  } else {
+    console.warn('close-auth-modal element is missing from the HTML.');
+  }
+
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.onsubmit = (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      login(email, password);
+    };
+  } else {
+    console.warn('login-form element is missing from the HTML.');
+  }
+
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    registerForm.onsubmit = (e) => {
+      e.preventDefault();
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+      const confirmPassword = document.getElementById('register-confirm-password').value;
+      register(email, password, confirmPassword);
+    };
+  } else {
+    console.warn('register-form element is missing from the HTML.');
+  }
+
+  const toggleAuthMode = document.getElementById('toggle-auth-mode');
+  if (toggleAuthMode) {
+    toggleAuthMode.onclick = (e) => {
+      e.preventDefault();
+      if (document.getElementById('login-form').style.display === 'none') {
+        showLoginForm();
+      } else {
+        showRegisterForm();
+      }
+    };
+  } else {
+    console.warn('toggle-auth-mode element is missing from the HTML.');
+  }
 }
 
 // Setup all the app event listeners (only called after successful login)
