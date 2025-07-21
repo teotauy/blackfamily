@@ -14,3 +14,7 @@ This project aims to create an interactive family tree application.
 *   CSS
 *   JavaScript
 *   JSON (for data storage) 
+
+# Trigger redeploy
+
+Last redeploy trigger: 2025-07-21 
