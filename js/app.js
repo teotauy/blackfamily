@@ -319,6 +319,26 @@ let currentUser = null;
 let authToken = localStorage.getItem('authToken');
 let familyData = [];
 
+// Restore user info from token if available
+async function restoreUserFromToken() {
+  if (authToken) {
+    try {
+      // Decode the JWT token to get user info
+      const payload = JSON.parse(atob(authToken.split('.')[1]));
+      currentUser = {
+        email: payload.email,
+        is_admin: payload.is_admin
+      };
+      console.log('Restored user from token:', currentUser);
+    } catch (error) {
+      console.error('Failed to restore user from token:', error);
+      // Clear invalid token
+      authToken = null;
+      localStorage.removeItem('authToken');
+    }
+  }
+}
+
 // --- Auth Functions ---
 function showAuthModal() {
   const authModal = document.getElementById('auth-modal');
@@ -663,11 +683,14 @@ async function loadFamilyDataFromAPI() {
 
 // --- Replace initial data load ---
 document.addEventListener('DOMContentLoaded', async () => {
+    // Restore user from token first
+    await restoreUserFromToken();
+    
     // Always update UI first to show correct initial state
     updateUIForAuth();
     
     // Check if user is already logged in
-    if (authToken) {
+    if (authToken && currentUser) {
         try {
             // Try to load data - if it fails, user will be logged out automatically
             await loadFamilyDataFromAPI();
@@ -683,7 +706,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // If loading fails, the apiCall function will handle logout
         }
     } else {
-        // Show login modal if no token
+        // Show login modal if no token or user
         showAuthModal();
     }
     
