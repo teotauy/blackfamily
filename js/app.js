@@ -513,6 +513,11 @@ async function showAdminDashboard() {
     const pendingUsers = await response.json();
     
     const list = document.getElementById('pending-users-list');
+    if (!list) {
+      console.error('pending-users-list element not found');
+      return;
+    }
+    
     list.innerHTML = '';
     
     if (pendingUsers.length === 0) {
@@ -529,7 +534,12 @@ async function showAdminDashboard() {
       });
     }
     
-    document.getElementById('admin-modal').style.display = 'block';
+    const adminModal = document.getElementById('admin-modal');
+    if (adminModal) {
+      adminModal.style.display = 'block';
+    } else {
+      console.error('admin-modal element not found');
+    }
   } catch (error) {
     console.error('Error loading pending users:', error);
   }
