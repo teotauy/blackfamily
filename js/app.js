@@ -52,12 +52,11 @@ function showRegisterForm() {
 }
 
 async function handleLogin() {
-    const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
     const errorDiv = document.getElementById('login-error');
     
-    if (!email || !password) {
-        errorDiv.textContent = 'Please enter both email and password';
+    if (!password) {
+        errorDiv.textContent = 'Please enter the family password';
         return;
     }
     
@@ -65,7 +64,7 @@ async function handleLogin() {
         const response = await fetch(`${API_BASE}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ password })
         });
         
         const data = await response.json();
@@ -322,20 +321,12 @@ let familyData = [];
 // Restore user info from token if available
 async function restoreUserFromToken() {
   if (authToken) {
-    try {
-      // Decode the JWT token to get user info
-      const payload = JSON.parse(atob(authToken.split('.')[1]));
-      currentUser = {
-        email: payload.email,
-        is_admin: payload.is_admin
-      };
-      console.log('Restored user from token:', currentUser);
-    } catch (error) {
-      console.error('Failed to restore user from token:', error);
-      // Clear invalid token
-      authToken = null;
-      localStorage.removeItem('authToken');
-    }
+    // Simple token system - if we have a token, we're logged in
+    currentUser = {
+      email: 'family@blackfamily.com',
+      is_admin: true
+    };
+    console.log('Restored user from token:', currentUser);
   }
 }
 
@@ -376,12 +367,12 @@ function showRegisterForm() {
   document.getElementById('toggle-auth-mode').textContent = 'Already have an account? Login';
 }
 
-async function login(email, password) {
+async function login(password) {
   try {
     const response = await fetch(`${API_BASE}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ password })
     });
     const data = await response.json();
     
@@ -390,7 +381,7 @@ async function login(email, password) {
     }
     
     authToken = data.token;
-    currentUser = { email, is_admin: data.is_admin };
+    currentUser = { email: 'family@blackfamily.com', is_admin: true };
     localStorage.setItem('authToken', authToken);
     hideAuthModal();
     updateUIForAuth();
@@ -451,17 +442,13 @@ function updateUIForAuth() {
   if (headerAuthSection) {
     headerAuthSection.innerHTML = `
       <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="color: #666; font-size: 14px;">Welcome, ${currentUser?.email || 'User'}!</span>
+        <span style="color: #666; font-size: 14px;">Welcome to the Black Family Tree!</span>
         <button id="logout-btn" style="padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Logout</button>
-        ${isAdmin ? '<button id="admin-btn" style="padding: 8px 16px; background: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">👑 Admin</button>' : ''}
       </div>
     `;
     
     // Re-attach event listeners
     document.getElementById('logout-btn').onclick = logout;
-    if (isAdmin) {
-      document.getElementById('admin-btn').onclick = showAdminDashboard;
-    }
   } else {
     console.warn('header-auth-section element is missing from the HTML.');
   }
@@ -525,70 +512,7 @@ function updateUIForAuth() {
   }
 }
 
-async function showAdminDashboard() {
-  try {
-    const response = await fetch(`${API_BASE}/users/pending`, {
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    const pendingUsers = await response.json();
-    
-    const list = document.getElementById('pending-users-list');
-    if (!list) {
-      console.error('pending-users-list element not found');
-      return;
-    }
-    
-    list.innerHTML = '';
-    
-    if (pendingUsers.length === 0) {
-      list.innerHTML = '<li>No pending users</li>';
-    } else {
-      pendingUsers.forEach(user => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          ${user.email} (registered: ${new Date(user.created_at).toLocaleDateString()})
-          <button onclick="approveUser(${user.id})">Approve</button>
-          <button onclick="rejectUser(${user.id})">Reject</button>
-        `;
-        list.appendChild(li);
-      });
-    }
-    
-    const adminModal = document.getElementById('admin-modal');
-    if (adminModal) {
-      adminModal.style.display = 'block';
-    } else {
-      console.error('admin-modal element not found');
-    }
-  } catch (error) {
-    console.error('Error loading pending users:', error);
-  }
-}
 
-async function approveUser(userId) {
-  try {
-    await fetch(`${API_BASE}/users/${userId}/approve`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    showAdminDashboard(); // Refresh the list
-  } catch (error) {
-    console.error('Error approving user:', error);
-  }
-}
-
-async function rejectUser(userId) {
-  if (confirm('Are you sure you want to reject this user?')) {
-    try {
-      await fetch(`${API_BASE}/users/${userId}/reject`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      showAdminDashboard(); // Refresh the list
-        } catch (error) {
-      console.error('Error rejecting user:', error);
-    }
-}
 
 async function clearAllData() {
   if (!confirm('Are you sure you want to clear all family data? This action cannot be undone.')) {
@@ -596,9 +520,8 @@ async function clearAllData() {
   }
   
   try {
-    await fetch(`${API_BASE}/admin/clear-data`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${authToken}` }
+    await fetch(`${API_BASE}/clear-data`, {
+      method: 'POST'
     });
     alert('All data cleared successfully');
     location.reload();
@@ -606,7 +529,6 @@ async function clearAllData() {
     console.error('Error clearing data:', error);
     alert('Failed to clear data');
   }
-}
 }
 
 // --- API Helper with Auth ---
@@ -836,39 +758,11 @@ function setupAuthEventListeners() {
   if (loginForm) {
     loginForm.onsubmit = (e) => {
       e.preventDefault();
-      const email = document.getElementById('login-email').value;
       const password = document.getElementById('login-password').value;
-      login(email, password);
+      login(password);
     };
   } else {
     console.warn('login-form element is missing from the HTML.');
-  }
-
-  const registerForm = document.getElementById('register-form');
-  if (registerForm) {
-    registerForm.onsubmit = (e) => {
-      e.preventDefault();
-      const email = document.getElementById('register-email').value;
-      const password = document.getElementById('register-password').value;
-      const confirmPassword = document.getElementById('register-confirm-password').value;
-      register(email, password, confirmPassword);
-    };
-  } else {
-    console.warn('register-form element is missing from the HTML.');
-  }
-
-  const toggleAuthMode = document.getElementById('toggle-auth-mode');
-  if (toggleAuthMode) {
-    toggleAuthMode.onclick = (e) => {
-      e.preventDefault();
-      if (document.getElementById('login-form').style.display === 'none') {
-        showLoginForm();
-      } else {
-        showRegisterForm();
-      }
-    };
-  } else {
-    console.warn('toggle-auth-mode element is missing from the HTML.');
   }
 }
 
