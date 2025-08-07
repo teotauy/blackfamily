@@ -965,16 +965,27 @@ function setupAppEventListeners() {
 }
 
 function renderFamilyTree() {
+    console.log('renderFamilyTree called with familyData:', familyData);
+    
     const treeContainer = document.getElementById('tree-container');
+    if (!treeContainer) {
+        console.error('tree-container element not found');
+        return;
+    }
+    
+    console.log('Found tree-container, rendering tree...');
     treeContainer.innerHTML = '<h2>Family Tree Visualization</h2>';
     const treeRootElement = document.createElement('div');
     treeRootElement.classList.add('tree');
     treeContainer.appendChild(treeRootElement);
 
     if (!familyData || familyData.length === 0) {
+        console.log('No family data to render');
         treeRootElement.innerHTML = '<p>No data to render the tree.</p>';
         return;
     }
+    
+    console.log(`Rendering tree with ${familyData.length} people`);
 
     // Find root nodes (individuals without parents listed in the data)
     const personMap = new Map(familyData.map(p => [p.id, p]));
