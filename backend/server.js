@@ -1,70 +1,12 @@
-// Family Tree Backend API (Node.js + Express + SQLite)
+// Family Tree Backend API (Node.js + Express + SQLite) - Simplified Version
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
-// Email notification setup (using nodemailer) - temporarily disabled
-// const nodemailer = require('nodemailer');
-
-// Create transporter for email notifications - temporarily disabled
-// const transporter = nodemailer.createTransporter({
-//   service: 'gmail',
-//   auth: {
-//     user: process.env.EMAIL_USER || 'your-email@gmail.com',
-//     pass: process.env.EMAIL_PASS || 'your-app-password'
-//   }
-// });
-
-// Admin configuration (will be set during setup)
-let adminConfig = {
-  name: '',
-  email: '',
-  phone: '',
-  familyName: '',
-  address: ''
-};
-
-// Check if admin is already set up
-function isAdminSetup() {
-  return adminConfig.email !== '';
-}
-
-// Function to send notification email - temporarily disabled
-async function sendNewUserNotification(userEmail) {
-  console.log('Email notification disabled - would send to admin for:', userEmail);
-  // Temporarily disabled to fix deployment
-  /*
-  const adminEmail = adminConfig.email || process.env.ADMIN_EMAIL || 'admin@familytree.com';
-  
-  const mailOptions = {
-    from: process.env.EMAIL_USER || 'your-email@gmail.com',
-    to: adminEmail,
-    subject: `🌳 New User Registration - ${adminConfig.familyName || 'Family Tree App'}`,
-    html: `
-      <h2>New User Registration</h2>
-      <p>A new user has registered for the ${adminConfig.familyName || 'Family Tree App'}:</p>
-      <ul>
-        <li><strong>Email:</strong> ${userEmail}</li>
-        <li><strong>Time:</strong> ${new Date().toLocaleString()}</li>
-      </ul>
-      <p>Please log into the admin dashboard to approve or reject this user.</p>
-      <p><a href="https://blackfamily.vercel.app">Go to Admin Dashboard</a></p>
-    `
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log('New user notification sent to admin');
-  } catch (error) {
-    console.error('Failed to send notification email:', error);
-  }
-  */
-}
+// Simple password for family access
+const FAMILY_PASSWORD = 'blackfamily2024';
 
 // CORS configuration for production
 const corsOptions = {
@@ -84,6 +26,21 @@ app.use(express.json());
 // Health check endpoint for Railway
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+// Simple login endpoint
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  
+  if (password === FAMILY_PASSWORD) {
+    res.json({ 
+      success: true, 
+      message: 'Access granted',
+      token: 'family-access-token' // Simple token
+    });
+  } else {
+    res.status(401).json({ error: 'Incorrect password' });
+  }
 });
 
 // --- SQLite Setup ---
@@ -114,348 +71,37 @@ db.serialize(() => {
     contact_city TEXT,
     contact_state TEXT,
     contact_zip TEXT,
-    can_receive_sms TEXT
+    can_receive_sms TEXT DEFAULT 'unsure'
   )`);
-  
-  // Add middle_name, maiden_name, nickname columns if they don't exist (for existing databases)
-  db.all("PRAGMA table_info(people)", [], (err, rows) => {
-    if (!err && rows) {
-      const hasMiddleName = rows.some(row => row.name === 'middle_name');
-      if (!hasMiddleName) {
-        db.run("ALTER TABLE people ADD COLUMN middle_name TEXT", (err) => {
-          if (err) {
-            console.log('middle_name column already exists or could not be added');
-          } else {
-            console.log('Added middle_name column to people table');
-          }
-        });
-      }
-      const hasMaidenName = rows.some(row => row.name === 'maiden_name');
-      if (!hasMaidenName) {
-        db.run("ALTER TABLE people ADD COLUMN maiden_name TEXT", (err) => {
-          if (err) {
-            console.log('maiden_name column already exists or could not be added');
-          } else {
-            console.log('Added maiden_name column to people table');
-          }
-        });
-      }
-      const hasNickname = rows.some(row => row.name === 'nickname');
-      if (!hasNickname) {
-        db.run("ALTER TABLE people ADD COLUMN nickname TEXT", (err) => {
-          if (err) {
-            console.log('nickname column already exists or could not be added');
-          } else {
-            console.log('Added nickname column to people table');
-          }
-        });
-      }
-    }
-  });
 
   db.run(`CREATE TABLE IF NOT EXISTS relationships (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     person_id INTEGER NOT NULL,
     related_id INTEGER NOT NULL,
-    type TEXT NOT NULL, -- 'parent', 'child', 'spouse'
-    FOREIGN KEY(person_id) REFERENCES people(id),
-    FOREIGN KEY(related_id) REFERENCES people(id)
+    type TEXT NOT NULL,
+    FOREIGN KEY (person_id) REFERENCES people (id) ON DELETE CASCADE,
+    FOREIGN KEY (related_id) REFERENCES people (id) ON DELETE CASCADE
   )`);
-});
 
-// --- Users Table ---
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    is_admin INTEGER DEFAULT 0,
-    approved INTEGER DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  )`);
-});
-
-// --- Seed Initial Admin User ---
-db.get('SELECT COUNT(*) as count FROM users', async (err, row) => {
-  if (!err && row.count === 0) {
-    const hash = await bcrypt.hash('adminpassword', 10);
-    db.run('INSERT INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1)', ['admin@familytree.com', hash]);
-    console.log('Seeded initial admin user: admin@familytree.com / adminpassword');
-  }
-});
-
-// --- Auth Middleware ---
-function authRequired(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth) return res.status(401).json({ error: 'No token' });
-  const token = auth.split(' ')[1];
-  jwt.verify(token, SECRET, (err, user) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  });
-}
-function adminRequired(req, res, next) {
-  if (!req.user || !req.user.is_admin) return res.status(403).json({ error: 'Admin only' });
-  next();
-}
-
-// --- Register ---
-app.post('/api/register', async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-  
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
-  }
-  
-  // Validate password strength
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters long' });
-  }
-  
-  const hash = await bcrypt.hash(password, 10);
-  db.run('INSERT INTO users (email, password_hash) VALUES (?, ?)', [email, hash], function(err) {
-    if (err) {
-      if (err.message.includes('UNIQUE constraint failed')) {
-        return res.status(400).json({ error: 'Email already exists' });
-      }
-      return res.status(500).json({ error: 'Registration failed' });
+  // Add columns if they don't exist
+  db.run("ALTER TABLE people ADD COLUMN middle_name TEXT", (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding middle_name column:', err);
     }
-    
-    // Send notification email to admin
-    sendNewUserNotification(email);
-    
-    res.json({ 
-      message: 'Registration successful! Your account is pending admin approval. You will be notified when approved.',
-      userId: this.lastID 
-    });
+  });
+
+  db.run("ALTER TABLE people ADD COLUMN maiden_name TEXT", (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding maiden_name column:', err);
+    }
+  });
+
+  db.run("ALTER TABLE people ADD COLUMN nickname TEXT", (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding nickname column:', err);
+    }
   });
 });
-
-// --- Login ---
-app.post('/api/login', (req, res) => {
-  const { email, password } = req.body;
-  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-    if (err || !user) return res.status(401).json({ error: 'Invalid credentials' });
-    if (!user.approved) return res.status(403).json({ error: 'Account not approved yet. Please wait for admin approval.' });
-    const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
-    const token = jwt.sign({ id: user.id, email: user.email, is_admin: !!user.is_admin }, SECRET, { expiresIn: '7d' });
-    res.json({ token, is_admin: !!user.is_admin });
-  });
-});
-
-// --- List Pending Users (Admin) ---
-app.get('/api/users/pending', authRequired, adminRequired, (req, res) => {
-  db.all('SELECT id, email, created_at FROM users WHERE approved = 0 ORDER BY created_at DESC', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-// --- Approve User (Admin) ---
-app.post('/api/users/:id/approve', authRequired, adminRequired, async (req, res) => {
-  db.get('SELECT email FROM users WHERE id = ?', [req.params.id], async (err, user) => {
-    if (err || !user) return res.status(404).json({ error: 'User not found' });
-    
-    db.run('UPDATE users SET approved = 1 WHERE id = ?', [req.params.id], function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      // Send approval notification email
-      const approvalMailOptions = {
-        from: process.env.EMAIL_USER || 'your-email@gmail.com',
-        to: user.email,
-        subject: '✅ Account Approved - Family Tree App',
-        html: `
-          <h2>Account Approved!</h2>
-          <p>Your account has been approved by the administrator.</p>
-          <p>You can now log in to the Family Tree App and start building your family tree!</p>
-          <p><a href="https://blackfamily.vercel.app">Login to Family Tree App</a></p>
-        `
-      };
-      
-      // transporter.sendMail(approvalMailOptions).catch(error => { // transporter is commented out
-      //   console.error('Failed to send approval email:', error);
-      // });
-      
-      res.json({ approved: true, message: 'User approved and notification sent' });
-    });
-  });
-});
-
-// --- Reject/Delete User (Admin) ---
-app.post('/api/users/:id/reject', authRequired, adminRequired, async (req, res) => {
-  db.get('SELECT email FROM users WHERE id = ?', [req.params.id], async (err, user) => {
-    if (err || !user) return res.status(404).json({ error: 'User not found' });
-    
-    db.run('DELETE FROM users WHERE id = ?', [req.params.id], function(err) {
-      if (err) return res.status(500).json({ error: err.message });
-      
-      // Send rejection notification email
-      const rejectionMailOptions = {
-        from: process.env.EMAIL_USER || 'your-email@gmail.com',
-        to: user.email,
-        subject: '❌ Account Application - Family Tree App',
-        html: `
-          <h2>Account Application Status</h2>
-          <p>We regret to inform you that your account application for the Family Tree App has not been approved.</p>
-          <p>If you believe this was an error, please contact the administrator.</p>
-        `
-      };
-      
-      // transporter.sendMail(rejectionMailOptions).catch(error => { // transporter is commented out
-      //   console.error('Failed to send rejection email:', error);
-      // });
-      
-      res.json({ deleted: true, message: 'User rejected and notification sent' });
-    });
-  });
-});
-
-// --- Admin Setup Endpoints ---
-
-// Check if admin is already set up
-app.get('/api/admin/status', (req, res) => {
-  res.json({ isSetup: isAdminSetup() });
-});
-
-// Admin setup endpoint
-app.post('/api/admin/setup', async (req, res) => {
-  // Check if admin is already set up
-  if (isAdminSetup()) {
-    return res.status(400).json({ error: 'Admin is already set up' });
-  }
-  
-  const { name, email, password, phone, familyName, address } = req.body;
-  
-  // Validation
-  if (!name || !email || !password || !familyName) {
-    return res.status(400).json({ error: 'Name, email, password, and family name are required' });
-  }
-  
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
-  }
-  
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ error: 'Invalid email format' });
-  }
-  
-  try {
-    // Hash password
-    const hash = await bcrypt.hash(password, 10);
-    
-    // Create admin user in database
-    db.run('INSERT INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1)', 
-      [email, hash], function(err) {
-        if (err) {
-          if (err.message.includes('UNIQUE constraint failed')) {
-            return res.status(400).json({ error: 'Email already exists' });
-          }
-          return res.status(500).json({ error: 'Failed to create admin account' });
-        }
-        
-        // Set admin configuration
-        adminConfig = {
-          name,
-          email,
-          phone: phone || '',
-          familyName,
-          address: address || ''
-        };
-        
-        console.log(`Admin setup completed for ${familyName} by ${name} (${email})`);
-        
-        res.json({ 
-          message: 'Admin setup completed successfully',
-          adminInfo: adminConfig
-        });
-      });
-      
-  } catch (error) {
-    console.error('Admin setup error:', error);
-    res.status(500).json({ error: 'Admin setup failed' });
-  }
-});
-
-// Get admin configuration
-app.get('/api/admin/config', (req, res) => {
-  if (!isAdminSetup()) {
-    return res.status(404).json({ error: 'Admin not set up' });
-  }
-  res.json(adminConfig);
-});
-
-// Get database stats
-app.get('/api/admin/stats', (req, res) => {
-  db.get('SELECT COUNT(*) as peopleCount FROM people', [], (err, peopleResult) => {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    db.get('SELECT COUNT(*) as relationshipsCount FROM relationships', [], (err2, relsResult) => {
-      if (err2) return res.status(500).json({ error: err2.message });
-      
-      db.get('SELECT COUNT(*) as usersCount FROM users', [], (err3, usersResult) => {
-        if (err3) return res.status(500).json({ error: err3.message });
-        
-        res.json({
-          people: peopleResult.peopleCount,
-          relationships: relsResult.relationshipsCount,
-          users: usersResult.usersCount
-        });
-      });
-    });
-  });
-});
-
-// Clear all data (admin only)
-app.post('/api/admin/clear-data', authRequired, adminRequired, (req, res) => {
-  db.run('DELETE FROM relationships', [], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    
-    db.run('DELETE FROM people', [], function(err2) {
-      if (err2) return res.status(500).json({ error: err2.message });
-      
-      res.json({ 
-        message: 'All data cleared successfully',
-        relationshipsDeleted: this.changes,
-        peopleDeleted: this.changes
-      });
-    });
-  });
-});
-
-// --- Get CSV Template ---
-app.get('/api/csv-template', (req, res) => {
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="family-tree-template.csv"');
-  res.send(`First Name,Last Name,DOB,Email,Phone,Notes
-John,Doe,1980-05-15,john.doe@email.com,555-123-4567,Primary contact
-Jane,Doe,1982-08-22,jane.doe@email.com,555-123-4568,Spouse
-Michael,Doe,2005-03-10,michael.doe@email.com,555-123-4569,Child
-Sarah,Doe,2008-11-05,sarah.doe@email.com,555-123-4570,Child
-Robert,Smith,1955-12-03,robert.smith@email.com,555-123-4571,Father
-Mary,Smith,1957-04-18,mary.smith@email.com,555-123-4572,Mother`);
-});
-
-// --- Protect Family Tree Endpoints ---
-function treeAuth(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth) return res.status(401).json({ error: 'No token' });
-  const token = auth.split(' ')[1];
-  jwt.verify(token, SECRET, (err, user) => {
-    if (err) return res.status(401).json({ error: 'Invalid token' });
-    if (!user) return res.status(401).json({ error: 'Invalid user' });
-    req.user = user;
-    next();
-  });
-}
-// Example: app.get('/api/people', treeAuth, ...)
-// For now, you can add treeAuth to all /api/people and /api/relationships endpoints to require login.
 
 // --- API Endpoints ---
 
@@ -479,11 +125,10 @@ app.get('/api/people/:id', (req, res) => {
   });
 });
 
-// Add a new person
+// Add a person
 app.post('/api/people', (req, res) => {
   const p = req.body;
-  db.run(`INSERT INTO people (name, middle_name, maiden_name, nickname, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  db.run(`INSERT INTO people (name, middle_name, maiden_name, nickname, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [p.name, p.middle_name, p.maiden_name, p.nickname, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure'],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
@@ -579,62 +224,39 @@ app.delete('/api/relationships/:id', (req, res) => {
   });
 });
 
-// --- Admin User Setup ---
-bcrypt.hash('mywju8-Mitkow-jofvor', 10).then(hash => {
-  db.get("SELECT id FROM users WHERE email = 'colby@colbyangusblack.com'", (err, row) => {
-    if (row) {
-      db.run(
-        "UPDATE users SET password_hash = ?, is_admin = 1, approved = 1 WHERE email = 'colby@colbyangusblack.com';",
-        [hash],
-        function(err) {
-          if (err) {
-            console.error('Failed to update admin user:', err);
-          } else {
-            console.log('Admin user updated/reset!');
-          }
-        }
-      );
-    } else {
-      db.run(
-        "INSERT INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1);",
-        ['colby@colbyangusblack.com', hash],
-        function(err) {
-          if (err) {
-            console.error('Failed to insert admin user:', err);
-          } else {
-            console.log('Admin user inserted!');
-          }
-        }
-      );
-    }
+// Simple clear data endpoint
+app.post('/api/clear-data', (req, res) => {
+  db.run('DELETE FROM relationships', [], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    db.run('DELETE FROM people', [], function(err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      
+      res.json({ 
+        message: 'All data cleared successfully',
+        relationshipsDeleted: this.changes,
+        peopleDeleted: this.changes
+      });
+    });
   });
 });
 
-// Temporary admin creation endpoint
-app.post('/api/create-admin', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const hash = await bcrypt.hash(password, 10);
-    
-    db.run(
-      "INSERT OR REPLACE INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1);",
-      [email, hash],
-      function(err) {
-        if (err) {
-          console.error('Failed to create admin:', err);
-          return res.status(500).json({ error: err.message });
-        }
-        console.log('Admin user created/updated!');
-        res.json({ message: 'Admin user created successfully' });
-      }
-    );
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+// Get CSV template
+app.get('/api/csv-template', (req, res) => {
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="family-tree-template.csv"');
+  res.send(`First Name,Last Name,DOB,Email,Phone,Notes
+John,Doe,1980-05-15,john.doe@email.com,555-123-4567,Primary contact
+Jane,Doe,1982-08-22,jane.doe@email.com,555-123-4568,Spouse
+Michael,Doe,2005-03-10,michael.doe@email.com,555-123-4569,Child
+Sarah,Doe,2008-11-05,sarah.doe@email.com,555-123-4570,Child
+Robert,Smith,1955-12-03,robert.smith@email.com,555-123-4571,Father
+Mary,Smith,1957-04-18,mary.smith@email.com,555-123-4572,Mother`);
 });
 
 // --- Start Server ---
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Railway deployment check - ${new Date().toISOString()}`);
-}); 
+  console.log(`Family password: ${FAMILY_PASSWORD}`);
+});
