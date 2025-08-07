@@ -610,6 +610,29 @@ bcrypt.hash('mywju8-Mitkow-jofvor', 10).then(hash => {
   });
 });
 
+// Temporary admin creation endpoint
+app.post('/api/create-admin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const hash = await bcrypt.hash(password, 10);
+    
+    db.run(
+      "INSERT OR REPLACE INTO users (email, password_hash, is_admin, approved) VALUES (?, ?, 1, 1);",
+      [email, hash],
+      function(err) {
+        if (err) {
+          console.error('Failed to create admin:', err);
+          return res.status(500).json({ error: err.message });
+        }
+        console.log('Admin user created/updated!');
+        res.json({ message: 'Admin user created successfully' });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- Start Server ---
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
