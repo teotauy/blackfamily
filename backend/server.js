@@ -580,6 +580,7 @@ app.delete('/api/relationships/:id', (req, res) => {
 });
 
 // --- Start Server ---
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Family Tree API server running at http://0.0.0.0:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Railway deployment check - ${new Date().toISOString()}`);
 }); 
