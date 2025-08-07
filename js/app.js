@@ -425,6 +425,8 @@ function updateUIForAuth() {
   const isAdmin = currentUser?.is_admin;
   const headerAuthSection = document.getElementById('header-auth-section');
   
+  console.log('updateUIForAuth called:', { isLoggedIn, isAdmin, currentUser });
+  
   // Update header auth section
   if (headerAuthSection) {
     headerAuthSection.innerHTML = `
@@ -450,16 +452,28 @@ function updateUIForAuth() {
   const searchSection = document.getElementById('search-section-container');
   const relationshipFinder = document.getElementById('relationship-finder-container');
   
+  console.log('Main content elements found:', {
+    mainContent: !!mainContent,
+    actionsToolbar: !!actionsToolbar,
+    searchSection: !!searchSection,
+    relationshipFinder: !!relationshipFinder
+  });
+  
   if (isLoggedIn) {
-    mainContent.style.display = 'block';
-    actionsToolbar.style.display = 'block';
-    searchSection.style.display = 'block';
-    relationshipFinder.style.display = 'block';
+    console.log('User is logged in, showing main content...');
+    if (mainContent) mainContent.style.display = 'block';
+    if (actionsToolbar) actionsToolbar.style.display = 'block';
+    if (searchSection) searchSection.style.display = 'block';
+    if (relationshipFinder) relationshipFinder.style.display = 'block';
+    
+    // Load family data
+    loadFamilyDataFromAPI();
   } else {
-    mainContent.style.display = 'none';
-    actionsToolbar.style.display = 'none';
-    searchSection.style.display = 'none';
-    relationshipFinder.style.display = 'none';
+    console.log('User is not logged in, hiding main content...');
+    if (mainContent) mainContent.style.display = 'none';
+    if (actionsToolbar) actionsToolbar.style.display = 'none';
+    if (searchSection) searchSection.style.display = 'none';
+    if (relationshipFinder) relationshipFinder.style.display = 'none';
     
     // Show a message indicating login is required
     if (!document.getElementById('login-required-message')) {
