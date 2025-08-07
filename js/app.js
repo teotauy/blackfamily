@@ -555,10 +555,28 @@ async function rejectUser(userId) {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
       showAdminDashboard(); // Refresh the list
-    } catch (error) {
+        } catch (error) {
       console.error('Error rejecting user:', error);
     }
+}
+
+async function clearAllData() {
+  if (!confirm('Are you sure you want to clear all family data? This action cannot be undone.')) {
+    return;
   }
+  
+  try {
+    await fetch(`${API_BASE}/admin/clear-data`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    alert('All data cleared successfully');
+    location.reload();
+  } catch (error) {
+    console.error('Error clearing data:', error);
+    alert('Failed to clear data');
+  }
+}
 }
 
 // --- API Helper with Auth ---
