@@ -466,8 +466,17 @@ function updateUIForAuth() {
     if (searchSection) searchSection.style.display = 'block';
     if (relationshipFinder) relationshipFinder.style.display = 'block';
     
-    // Load family data
-    loadFamilyDataFromAPI();
+    // Load family data and setup app
+    loadFamilyDataFromAPI().then(() => {
+      console.log('Family data loaded, rendering tree and setting up app...');
+      if (familyData.length > 0) {
+        renderFamilyTree();
+        renderUpcomingBirthdays();
+        setupAppEventListeners();
+      }
+    }).catch(error => {
+      console.error('Failed to load family data:', error);
+    });
   } else {
     console.log('User is not logged in, hiding main content...');
     if (mainContent) mainContent.style.display = 'none';
