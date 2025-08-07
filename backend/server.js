@@ -28,7 +28,35 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Simple login endpoint
+// Phone + Password verification endpoint
+app.post('/api/verify-access', (req, res) => {
+  const { phone, password } = req.body;
+  
+  // First check if phone exists in family database
+  db.get('SELECT id FROM people WHERE contact_phone = ?', [phone], (err, person) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!person) {
+      return res.status(401).json({ error: 'Phone number not found in family database' });
+    }
+    
+    // Then verify family password
+    if (password === FAMILY_PASSWORD) {
+      res.json({ 
+        success: true, 
+        message: 'Access granted',
+        token: 'family-access-token',
+        personId: person.id
+      });
+    } else {
+      res.status(401).json({ error: 'Incorrect family password' });
+    }
+  });
+});
+
+// Keep simple login for backward compatibility
 app.post('/api/login', (req, res) => {
   const { password } = req.body;
   

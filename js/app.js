@@ -367,21 +367,26 @@ function showRegisterForm() {
   document.getElementById('toggle-auth-mode').textContent = 'Already have an account? Login';
 }
 
-async function login(password) {
+async function login(phone, password) {
   try {
-    const response = await fetch(`${API_BASE}/login`, {
+    const response = await fetch(`${API_BASE}/verify-access`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password })
+      body: JSON.stringify({ phone, password })
     });
     const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.error || 'Login failed');
+      throw new Error(data.error || 'Access denied');
     }
     
     authToken = data.token;
-    currentUser = { email: 'family@blackfamily.com', is_admin: true };
+    currentUser = { 
+      email: 'family@blackfamily.com', 
+      is_admin: true,
+      phone: phone,
+      personId: data.personId
+    };
     localStorage.setItem('authToken', authToken);
     hideAuthModal();
     updateUIForAuth();
@@ -442,7 +447,7 @@ function updateUIForAuth() {
   if (headerAuthSection) {
     headerAuthSection.innerHTML = `
       <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="color: #666; font-size: 14px;">Welcome to the Black Family Tree!</span>
+        <span style="color: #666; font-size: 14px;">Welcome to the Black Family Tree! (${currentUser?.phone || 'Family Member'})</span>
         <button id="logout-btn" style="padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Logout</button>
       </div>
     `;
@@ -758,8 +763,9 @@ function setupAuthEventListeners() {
   if (loginForm) {
     loginForm.onsubmit = (e) => {
       e.preventDefault();
+      const phone = document.getElementById('login-phone').value;
       const password = document.getElementById('login-password').value;
-      login(password);
+      login(phone, password);
     };
   } else {
     console.warn('login-form element is missing from the HTML.');
