@@ -1,42 +1,31 @@
 // Family Tree Backend API (Node.js + Express + SQLite) - Simplified Version
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Simple password for family access
 const FAMILY_PASSWORD = 'blackfamily2024';
 
-// CORS configuration for production - More permissive
-const corsOptions = {
-  origin: true, // Allow all origins temporarily
-  credentials: true,
-  optionsSuccessStatus: 200
-};
-
-// Add CORS debugging
+// Bulletproof CORS configuration
 app.use((req, res, next) => {
-  console.log('CORS Debug - Origin:', req.headers.origin);
-  console.log('CORS Debug - Method:', req.method);
-  next();
-});
-
-// Apply CORS to all routes
-app.use(cors(corsOptions));
-
-// Add explicit CORS headers for all routes
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  // Log all requests for debugging
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  
+  // Set CORS headers for ALL requests
+  res.header('Access-Control-Allow-Origin', 'https://blackfamily-r1.vercel.app');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
   
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    console.log('Handling OPTIONS preflight request');
+    res.status(200).end();
+    return;
   }
+  
+  next();
 });
 app.use(express.json());
 
