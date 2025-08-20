@@ -24,6 +24,13 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200
 };
+
+// Add CORS debugging
+app.use((req, res, next) => {
+  console.log('CORS Debug - Origin:', req.headers.origin);
+  console.log('CORS Debug - Method:', req.method);
+  next();
+});
 app.use(cors(corsOptions));
 app.use(express.json());
 
