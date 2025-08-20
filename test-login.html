@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Test</title>
+</head>
+<body>
+    <h1>Login Test</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testDataLoad()">Test Data Load</button>
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = 'https://blackfamily-production.up.railway.app/api';
+        let authToken = null;
+        
+        async function testLogin() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing login...';
+            
+            try {
+                console.log('Testing login with:', { phone: '5124266530', password: 'blackfamily2024' });
+                
+                const response = await fetch(`${API_BASE}/verify-access`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        phone: '5124266530', 
+                        password: 'blackfamily2024' 
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    resultDiv.innerHTML = `<p style="color: green;">✅ Login successful! Token: ${data.token}</p>`;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: red;">❌ Login failed: ${data.error}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testDataLoad() {
+            if (!authToken) {
+                document.getElementById('result').innerHTML = '<p style="color: orange;">⚠️ Please login first</p>';
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML += '<br>Testing data load...';
+            
+            try {
+                // Test people endpoint
+                const peopleResponse = await fetch(`${API_BASE}/people`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                console.log('People response status:', peopleResponse.status);
+                
+                if (peopleResponse.ok) {
+                    const people = await peopleResponse.json();
+                    console.log('People data:', people);
+                    resultDiv.innerHTML += '<br><span style="color: green;">✅ People loaded: ' + people.length + ' records</span>';
+                } else {
+                    resultDiv.innerHTML += '<br><span style="color: red;">❌ People failed: ' + peopleResponse.status + '</span>';
+                }
+                
+                // Test relationships endpoint
+                const relsResponse = await fetch(`${API_BASE}/relationships`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                console.log('Relationships response status:', relsResponse.status);
+                
+                if (relsResponse.ok) {
+                    const rels = await relsResponse.json();
+                    console.log('Relationships data:', rels);
+                    resultDiv.innerHTML += '<br><span style="color: green;">✅ Relationships loaded: ' + rels.length + ' records</span>';
+                } else {
+                    resultDiv.innerHTML += '<br><span style="color: red;">❌ Relationships failed: ' + relsResponse.status + '</span>';
+                }
+                
+            } catch (error) {
+                console.error('Data load error:', error);
+                resultDiv.innerHTML += '<br><span style="color: red;">❌ Data load error: ' + error.message + '</span>';
+            }
+        }
+    </script>
+</body>
+</html>

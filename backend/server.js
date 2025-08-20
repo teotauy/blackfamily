@@ -29,6 +29,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// Test endpoint to verify CORS
+app.get('/api/test-cors', (req, res) => {
+  console.log('CORS Test - Origin:', req.headers.origin);
+  res.json({ 
+    message: 'CORS test successful', 
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Phone + Password verification endpoint
 app.post('/api/verify-access', (req, res) => {
   const { phone, password } = req.body;
