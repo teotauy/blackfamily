@@ -14,8 +14,11 @@ const corsOptions = {
     'https://teotauy.github.io',
     'https://blackfamily.vercel.app',
     'https://blackfamily-k92rbe7i5-colby-blacks-projects.vercel.app',
+    'https://*.vercel.app',
+    'https://*.railway.app',
     'http://localhost:3000',
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'http://localhost:5000'
   ],
   credentials: true,
   optionsSuccessStatus: 200

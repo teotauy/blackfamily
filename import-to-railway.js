@@ -16,8 +16,8 @@ async function importFamilyData() {
         people.push({
           name: `${row['First Name']} ${row['Last Name']}`,
           date_of_birth: row['DOB'],
-          email: row['Email'],
-          phone: row['Phone'],
+          contact_email: row['Email'],
+          contact_phone: row['Phone'],
           notes: row['Notes']
         });
       })
