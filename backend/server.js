@@ -8,19 +8,9 @@ const PORT = process.env.PORT || 5000;
 // Simple password for family access
 const FAMILY_PASSWORD = 'blackfamily2024';
 
-// CORS configuration for production
+// CORS configuration for production - More permissive
 const corsOptions = {
-  origin: [
-    'https://teotauy.github.io',
-    'https://blackfamily.vercel.app',
-    'https://blackfamily-k92rbe7i5-colby-blacks-projects.vercel.app',
-    'https://blackfamily-r1.vercel.app',
-    'https://*.vercel.app',
-    'https://*.railway.app',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:5000'
-  ],
+  origin: true, // Allow all origins temporarily
   credentials: true,
   optionsSuccessStatus: 200
 };
