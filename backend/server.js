@@ -314,4 +314,6 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Railway deployment check - ${new Date().toISOString()}`);
   console.log(`Family password: ${FAMILY_PASSWORD}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`Process ID: ${process.pid}`);
 });
