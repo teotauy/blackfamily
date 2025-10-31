@@ -7,25 +7,17 @@ const PORT = process.env.PORT || 5000;
 // Simple password for family access
 const FAMILY_PASSWORD = 'blackfamily2024';
 
-// Bulletproof CORS configuration
+// Simple CORS - allow all origins for family app
 app.use((req, res, next) => {
-  // Log all requests for debugging
-  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin}`);
-  
-  // Set CORS headers for ALL requests
-  res.header('Access-Control-Allow-Origin', 'https://blackfamily-r1.vercel.app');
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
-  // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request');
-    res.status(200).end();
-    return;
+    res.sendStatus(200);
+  } else {
+    next();
   }
-  
-  next();
 });
 app.use(express.json());
 
@@ -34,15 +26,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Test endpoint to verify CORS
-app.get('/api/test-cors', (req, res) => {
-  console.log('CORS Test - Origin:', req.headers.origin);
-  res.json({ 
-    message: 'CORS test successful', 
-    origin: req.headers.origin,
-    timestamp: new Date().toISOString()
-  });
-});
 
 // Phone + Password verification endpoint
 app.post('/api/verify-access', (req, res) => {
@@ -70,21 +53,6 @@ app.post('/api/verify-access', (req, res) => {
       res.status(401).json({ error: 'Incorrect family password' });
     }
   });
-});
-
-// Keep simple login for backward compatibility
-app.post('/api/login', (req, res) => {
-  const { password } = req.body;
-  
-  if (password === FAMILY_PASSWORD) {
-    res.json({ 
-      success: true, 
-      message: 'Access granted',
-      token: 'family-access-token' // Simple token
-    });
-  } else {
-    res.status(401).json({ error: 'Incorrect password' });
-  }
 });
 
 // --- SQLite Setup ---
