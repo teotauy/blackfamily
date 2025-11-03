@@ -27,7 +27,7 @@
 ### Step 4: Configure Service
 **IMPORTANT SETTINGS:**
 - **Service Type:** Web Service
-- **Root Directory:** `backend/` (this is critical!)
+- **Root Directory:** `backend` (this is critical! No trailing slash)
 - **Framework:** Node.js (or Auto-detect)
 - **Branch:** `main`
 
