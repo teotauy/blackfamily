@@ -356,6 +356,7 @@ function skipOnboarding() {
 let currentUser = null;
 let authToken = localStorage.getItem('authToken');
 let familyData = [];
+let appEventListenersInitialized = false;
 
 // Restore user info from token if available
 async function restoreUserFromToken() {
@@ -864,6 +865,10 @@ function setupAuthEventListeners() {
 
 // Setup all the app event listeners (only called after successful login)
 function setupAppEventListeners() {
+    if (appEventListenersInitialized) {
+        return;
+    }
+    appEventListenersInitialized = true;
     // Setup Autocompletes
     setupAutocomplete('add-parents-input', 'add-parents-suggestions', 'selected-parents-list', 'add-parents-ids', 'parent');
     setupAutocomplete('add-children-input', 'add-children-suggestions', 'selected-children-list', 'add-children-ids', 'child');
