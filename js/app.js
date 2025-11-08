@@ -348,23 +348,56 @@ function showAuthModal() {
 }
 
 function hideAuthModal() {
-  document.getElementById('auth-modal').style.display = 'none';
-  document.getElementById('login-error').textContent = '';
-  document.getElementById('register-error').textContent = '';
+  const authModal = document.getElementById('auth-modal');
+  if (authModal) {
+    authModal.style.display = 'none';
+  }
+  const loginErrorEl = document.getElementById('login-error');
+  if (loginErrorEl) {
+    loginErrorEl.textContent = '';
+  }
+  const registerErrorEl = document.getElementById('register-error');
+  if (registerErrorEl) {
+    registerErrorEl.textContent = '';
+  }
 }
 
 function showLoginForm() {
-  document.getElementById('auth-modal-title').textContent = 'Login';
-  document.getElementById('login-form').style.display = 'block';
-  document.getElementById('register-form').style.display = 'none';
-  document.getElementById('toggle-auth-mode').textContent = "Don't have an account? Register";
+  const titleEl = document.getElementById('auth-modal-title');
+  if (titleEl) {
+    titleEl.textContent = 'Login';
+  }
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.style.display = 'block';
+  }
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    registerForm.style.display = 'none';
+  }
+  const toggleBtn = document.getElementById('toggle-auth-mode');
+  if (toggleBtn) {
+    toggleBtn.textContent = "Don't have an account? Register";
+  }
 }
 
 function showRegisterForm() {
-  document.getElementById('auth-modal-title').textContent = 'Register';
-  document.getElementById('login-form').style.display = 'none';
-  document.getElementById('register-form').style.display = 'block';
-  document.getElementById('toggle-auth-mode').textContent = 'Already have an account? Login';
+  const titleEl = document.getElementById('auth-modal-title');
+  if (titleEl) {
+    titleEl.textContent = 'Register';
+  }
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) {
+    loginForm.style.display = 'none';
+  }
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    registerForm.style.display = 'block';
+  }
+  const toggleBtn = document.getElementById('toggle-auth-mode');
+  if (toggleBtn) {
+    toggleBtn.textContent = 'Already have an account? Login';
+  }
 }
 
 async function login(phone, password) {
