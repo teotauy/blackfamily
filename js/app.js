@@ -422,6 +422,26 @@ async function login(phone, password) {
     };
     localStorage.setItem('authToken', authToken);
     hideAuthModal();
+    const appContainer = document.getElementById('family-tree-app');
+    if (appContainer) {
+      appContainer.style.display = 'block';
+    }
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      mainContent.style.display = 'block';
+    }
+    const actionsToolbar = document.getElementById('actions-toolbar');
+    if (actionsToolbar) {
+      actionsToolbar.style.display = 'flex';
+    }
+    const searchSection = document.getElementById('search-section-container');
+    if (searchSection) {
+      searchSection.style.display = 'block';
+    }
+    const relationshipFinder = document.getElementById('relationship-finder-container');
+    if (relationshipFinder) {
+      relationshipFinder.style.display = 'block';
+    }
     updateUIForAuth();
     await loadFamilyDataFromAPI();
     renderFamilyTree();
@@ -514,11 +534,9 @@ function updateUIForAuth() {
     // Load family data and setup app
     loadFamilyDataFromAPI().then(() => {
       console.log('Family data loaded, rendering tree and setting up app...');
-      if (familyData.length > 0) {
-        renderFamilyTree();
-        renderUpcomingBirthdays();
-        setupAppEventListeners();
-      }
+      renderFamilyTree();
+      renderUpcomingBirthdays();
+      setupAppEventListeners();
     }).catch(error => {
       console.error('Failed to load family data:', error);
     });
