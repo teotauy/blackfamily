@@ -186,6 +186,7 @@ function handleCSVUpload(event) {
             
             successDiv.textContent = `Found ${rows.length} people in CSV`;
             errorDiv.textContent = '';
+            uploadBtn.disabled = false;
             uploadBtn.style.display = 'inline-block';
         } catch (error) {
             errorDiv.textContent = 'Error parsing CSV file: ' + error.message;
