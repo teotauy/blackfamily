@@ -518,6 +518,7 @@ function logout() {
   authToken = null;
   currentUser = null;
   familyData = []; // Clear cached family data
+  appEventListenersInitialized = false;
   localStorage.removeItem('authToken');
   
   // Clear any displayed content
