@@ -2744,21 +2744,29 @@ function formatDateLong(dateString) {
 }
 
 // Modal for editing relationships
-function showEditRelationshipsModal(personId) {
+const enhancedShowEditRelationshipsModal = function(personId) {
     const person = familyData.find(p => p.id === personId);
-    if (!person) return;
-    document.body.classList.add('modal-open');
-    let modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal-dialog">
-        <button class="modal-close-btn" id="close-modal-x" title="Close">&times;</button>
+    if (!person) {
+        return;
+    }
+
+    const personMap = new Map(familyData.map(p => [p.id, p]));
+    const parentIds = new Set((person.parents || []).filter(id => id !== personId));
+    const childIds = new Set((person.children || []).filter(id => id !== personId));
+    let spouseId = (person.marriages && person.marriages[0]) ? person.marriages[0].spouseId : null;
+    if (spouseId === personId) spouseId = null;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-dialog relationship-modal">
+        <button type="button" class="modal-close-btn" id="close-modal-x" title="Close">&times;</button>
         <h3>Edit Relationships for ${person.nickname || person.name}</h3>
-        <div style="margin-bottom:10px;">
+        <div class="modal-section">
           <strong>Name:</strong> ${person.name}<br/>
-          <label>Nickname: <input type="text" id="edit-nickname" value="${person.nickname || ''}" placeholder="Preferred name (used in tree)"></label><br/>
-          <label>Middle Name: <input type="text" id="edit-middleName" value="${person.middleName || ''}"></label><br/>
-          <label>Pronouns:
+          <label>Nickname:<br/><input type="text" id="edit-nickname" value="${person.nickname || ''}" placeholder="Preferred name (used in tree)"></label><br/>
+          <label>Middle Name:<br/><input type="text" id="edit-middleName" value="${person.middle_name || person.middleName || ''}"></label><br/>
+          <label>Pronouns:<br/>
             <select id="edit-pronouns">
               <option value="">-- Select --</option>
               <option value="he/him">he/him</option>
@@ -2773,122 +2781,273 @@ function showEditRelationshipsModal(personId) {
             <input type="text" id="edit-pronouns-custom" placeholder="Enter custom pronouns" style="display:none; margin-top:5px;">
           </label><br/>
           <label><input type="checkbox" id="edit-deceased" ${person.deathDate ? 'checked' : ''}> Deceased</label><br/>
-          <label>Death Date: <input type="text" id="edit-deathDate" value="${person.deathDate || ''}" ${person.deathDate ? '' : 'disabled'}></label><br/>
+          <label>Death Date:<br/><input type="text" id="edit-deathDate" value="${person.deathDate || ''}" ${person.deathDate ? '' : 'disabled'} placeholder="YYYY-MM-DD or free text"></label>
         </div>
-        <div>
+        <div class="modal-section">
           <label>Parents:</label>
-          <input type="text" id="edit-parents-input" autocomplete="off" placeholder="Type to search...">
+          <input type="text" id="edit-parents-input" autocomplete="off" placeholder="Type to search..." />
           <div id="edit-parents-suggestions" class="autocomplete-suggestions"></div>
           <div id="edit-selected-parents-list" class="selected-items-list"></div>
         </div>
-        <div>
+        <div class="modal-section">
           <label>Children:</label>
-          <input type="text" id="edit-children-input" autocomplete="off" placeholder="Type to search...">
+          <input type="text" id="edit-children-input" autocomplete="off" placeholder="Type to search..." />
           <div id="edit-children-suggestions" class="autocomplete-suggestions"></div>
           <div id="edit-selected-children-list" class="selected-items-list"></div>
         </div>
-        <div>
+        <div class="modal-section">
           <label>Spouse:</label>
-          <input type="text" id="edit-spouse-input" autocomplete="off" placeholder="Type to search...">
+          <input type="text" id="edit-spouse-input" autocomplete="off" placeholder="Type to search..." />
           <div id="edit-spouse-suggestions" class="autocomplete-suggestions"></div>
           <div id="edit-selected-spouse-display" class="selected-items-list"></div>
         </div>
-        <div>
-          <label>Wedding Date: <input type="text" id="edit-weddingDate" value="${(person.marriages && person.marriages[0] && person.marriages[0].weddingDate) || ''}" placeholder="YYYY-MM-DD or free text"></label><br/>
+        <div class="modal-section">
+          <label>Wedding Date:<br/><input type="text" id="edit-weddingDate" value="${(person.marriages && person.marriages[0] && (person.marriages[0].weddingDate || '')) || ''}" placeholder="YYYY-MM-DD or free text"></label><br/>
           <label><input type="checkbox" id="edit-divorced" ${(person.marriages && person.marriages[0] && person.marriages[0].divorceDate) ? 'checked' : ''}> Divorced</label><br/>
-          <label>Divorce Date: <input type="text" id="edit-divorceDate" value="${(person.marriages && person.marriages[0] && person.marriages[0].divorceDate) || ''}" ${(person.marriages && person.marriages[0] && person.marriages[0].divorceDate) ? '' : 'disabled'} placeholder="YYYY-MM-DD or free text"></label><br/>
+          <label>Divorce Date:<br/><input type="text" id="edit-divorceDate" value="${(person.marriages && person.marriages[0] && (person.marriages[0].divorceDate || '')) || ''}" ${(person.marriages && person.marriages[0] && person.marriages[0].divorceDate) ? '' : 'disabled'} placeholder="YYYY-MM-DD or free text"></label>
         </div>
-        <div style="margin-top:10px;">
-          <button id="save-relationships-btn">Save</button>
-          <button id="cancel-relationships-btn">Cancel</button>
+        <div class="modal-actions">
+          <button type="button" id="save-relationships-btn" class="primary">Save</button>
+          <button type="button" id="cancel-relationships-btn">Cancel</button>
         </div>
       </div>
     `;
-    document.body.appendChild(modal);
-    // Pre-fill selected relationships
-    let editSelectedParentIds = person.parents ? [...person.parents] : [];
-    let editSelectedChildrenIds = person.children ? [...person.children] : [];
-    let editSelectedSpouseId = (person.marriages && person.marriages[0]) ? person.marriages[0].spouseId : null;
-    renderSelectedItems(editSelectedParentIds, familyData, document.getElementById('edit-selected-parents-list'), { value: '' }, 'parent');
-    renderSelectedItems(editSelectedChildrenIds, familyData, document.getElementById('edit-selected-children-list'), { value: '' }, 'child');
-    renderSelectedItems(editSelectedSpouseId ? [editSelectedSpouseId] : [], familyData, document.getElementById('edit-selected-spouse-display'), { value: '' }, 'spouse');
-    setupEditAutocomplete('edit-parents-input', 'edit-parents-suggestions', 'edit-selected-parents-list', 'parent');
-    setupEditAutocomplete('edit-children-input', 'edit-children-suggestions', 'edit-selected-children-list', 'child');
-    setupEditAutocomplete('edit-spouse-input', 'edit-spouse-suggestions', 'edit-selected-spouse-display', 'spouse');
-    // Pronouns dropdown logic
-    const pronounsSelect = document.getElementById('edit-pronouns');
-    const pronounsCustom = document.getElementById('edit-pronouns-custom');
-    if (pronounsSelect && pronounsCustom) {
-        pronounsSelect.value = person.pronouns && ["he/him","she/her","they/them","he/they","she/they","ze/zir","xe/xem"].includes(person.pronouns) ? person.pronouns : (person.pronouns ? 'custom' : '');
-        pronounsCustom.style.display = pronounsSelect.value === 'custom' ? 'inline-block' : 'none';
-        if (pronounsSelect.value === 'custom') pronounsCustom.value = person.pronouns || '';
-        pronounsSelect.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                pronounsCustom.style.display = 'inline-block';
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('modal-open');
+
+    const parentsListEl = overlay.querySelector('#edit-selected-parents-list');
+    const childrenListEl = overlay.querySelector('#edit-selected-children-list');
+    const spouseDisplayEl = overlay.querySelector('#edit-selected-spouse-display');
+
+    const pronounsSelect = overlay.querySelector('#edit-pronouns');
+    const pronounsCustomInput = overlay.querySelector('#edit-pronouns-custom');
+    if (pronounsSelect && pronounsCustomInput) {
+        const presetPronouns = ["he/him","she/her","they/them","he/they","she/they","ze/zir","xe/xem"];
+        if (person.pronouns && presetPronouns.includes(person.pronouns)) {
+            pronounsSelect.value = person.pronouns;
+        } else if (person.pronouns) {
+            pronounsSelect.value = 'custom';
+            pronounsCustomInput.style.display = 'inline-block';
+            pronounsCustomInput.value = person.pronouns;
+        }
+        pronounsSelect.addEventListener('change', () => {
+            if (pronounsSelect.value === 'custom') {
+                pronounsCustomInput.style.display = 'inline-block';
+                pronounsCustomInput.focus();
             } else {
-                pronounsCustom.style.display = 'none';
-                pronounsCustom.value = '';
+                pronounsCustomInput.style.display = 'none';
+                pronounsCustomInput.value = '';
             }
         });
     }
-    // Deceased/death date logic
-    const deceasedCheckbox = document.getElementById('edit-deceased');
-    const deathDateInput = document.getElementById('edit-deathDate');
+
+    const deceasedCheckbox = overlay.querySelector('#edit-deceased');
+    const deathDateInput = overlay.querySelector('#edit-deathDate');
     if (deceasedCheckbox && deathDateInput) {
-        deceasedCheckbox.addEventListener('change', function() {
-            deathDateInput.disabled = !this.checked;
-            if (!this.checked) deathDateInput.value = '';
+        deathDateInput.disabled = !deceasedCheckbox.checked;
+        deceasedCheckbox.addEventListener('change', () => {
+            deathDateInput.disabled = !deceasedCheckbox.checked;
+            if (!deceasedCheckbox.checked) deathDateInput.value = '';
         });
     }
-    // Divorced/divorce date logic
-    const divorcedCheckbox = document.getElementById('edit-divorced');
-    const divorceDateInput = document.getElementById('edit-divorceDate');
+
+    const divorcedCheckbox = overlay.querySelector('#edit-divorced');
+    const divorceDateInput = overlay.querySelector('#edit-divorceDate');
     if (divorcedCheckbox && divorceDateInput) {
-        divorcedCheckbox.addEventListener('change', function() {
-            divorceDateInput.disabled = !this.checked;
-            if (!this.checked) divorceDateInput.value = '';
+        divorceDateInput.disabled = !divorcedCheckbox.checked;
+        divorcedCheckbox.addEventListener('change', () => {
+            divorceDateInput.disabled = !divorcedCheckbox.checked;
+            if (!divorcedCheckbox.checked) divorceDateInput.value = '';
         });
     }
-    // Save/cancel/close handlers
-    function closeModal() {
-        document.body.removeChild(modal);
+
+    const renderSelectedList = (idsArray, container, type) => {
+        container.innerHTML = '';
+        if (!idsArray.length) {
+            const empty = document.createElement('span');
+            empty.classList.add('empty-selected');
+            empty.textContent = type === 'spouse' ? 'No spouse selected yet.' : 'No selections yet.';
+            container.appendChild(empty);
+            return;
+        }
+
+        idsArray.forEach(id => {
+            const relative = personMap.get(id);
+            if (!relative) return;
+            const tag = document.createElement('span');
+            tag.classList.add('selected-item-tag');
+            tag.innerHTML = `${relative.name} <span class="suggestion-item-dob">(${relative.birthDate || 'DOB unknown'})</span>`;
+            const removeBtn = document.createElement('span');
+            removeBtn.classList.add('remove-item');
+            removeBtn.textContent = '×';
+            removeBtn.title = 'Remove';
+            removeBtn.addEventListener('click', () => {
+                if (type === 'parent') {
+                    parentIds.delete(id);
+                    renderParents();
+                } else if (type === 'child') {
+                    childIds.delete(id);
+                    renderChildren();
+                } else if (type === 'spouse') {
+                    spouseId = null;
+                    renderSpouse();
+                }
+            });
+            tag.appendChild(removeBtn);
+            container.appendChild(tag);
+        });
+    };
+
+    const renderParents = () => renderSelectedList(Array.from(parentIds), parentsListEl, 'parent');
+    const renderChildren = () => renderSelectedList(Array.from(childIds), childrenListEl, 'child');
+    const renderSpouse = () => {
+        if (!spouseId) {
+            renderSelectedList([], spouseDisplayEl, 'spouse');
+        } else {
+            renderSelectedList([spouseId], spouseDisplayEl, 'spouse');
+        }
+    };
+
+    renderParents();
+    renderChildren();
+    renderSpouse();
+
+    const attachAutocomplete = (inputSelector, suggestionsSelector, type) => {
+        const inputEl = overlay.querySelector(inputSelector);
+        const suggestionsEl = overlay.querySelector(suggestionsSelector);
+        if (!inputEl || !suggestionsEl) return;
+
+        const hideSuggestions = () => {
+            suggestionsEl.innerHTML = '';
+            suggestionsEl.style.display = 'none';
+        };
+
+        inputEl.addEventListener('input', () => {
+            const query = inputEl.value.trim().toLowerCase();
+            suggestionsEl.innerHTML = '';
+
+            if (!query) {
+                hideSuggestions();
+                return;
+            }
+
+            const matches = familyData.filter(candidate => {
+                if (candidate.id === personId) return false;
+                if (!candidate.name || !candidate.name.toLowerCase().includes(query)) return false;
+                if (type === 'parent' && parentIds.has(candidate.id)) return false;
+                if (type === 'child' && childIds.has(candidate.id)) return false;
+                if (type === 'spouse' && spouseId === candidate.id) return false;
+                return true;
+            }).slice(0, 8);
+
+            if (!matches.length) {
+                hideSuggestions();
+                return;
+            }
+
+            matches.forEach(candidate => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.innerHTML = `
+                  <span>${candidate.name}</span>
+                  <span class="suggestion-item-dob">${candidate.birthDate || 'DOB unknown'}</span>
+                `;
+                item.addEventListener('mousedown', event => {
+                    event.preventDefault();
+                    if (type === 'parent') {
+                        parentIds.add(candidate.id);
+                        renderParents();
+                    } else if (type === 'child') {
+                        childIds.add(candidate.id);
+                        renderChildren();
+                    } else if (type === 'spouse') {
+                        spouseId = candidate.id;
+                        renderSpouse();
+                    }
+                    inputEl.value = '';
+                    hideSuggestions();
+                });
+                suggestionsEl.appendChild(item);
+            });
+
+            suggestionsEl.style.display = 'block';
+        });
+
+        inputEl.addEventListener('blur', () => {
+            setTimeout(hideSuggestions, 150);
+        });
+    };
+
+    attachAutocomplete('#edit-parents-input', '#edit-parents-suggestions', 'parent');
+    attachAutocomplete('#edit-children-input', '#edit-children-suggestions', 'child');
+    attachAutocomplete('#edit-spouse-input', '#edit-spouse-suggestions', 'spouse');
+
+    const closeModal = () => {
+        overlay.remove();
         document.body.classList.remove('modal-open');
         document.removeEventListener('keydown', escListener);
-    }
-    document.getElementById('save-relationships-btn').onclick = async function() {
-        // Save all fields to backend
-        const nickname = document.getElementById('edit-nickname').value.trim();
-        const middleName = document.getElementById('edit-middleName').value.trim();
-        let pronouns = document.getElementById('edit-pronouns').value;
-        if (pronouns === 'custom') pronouns = document.getElementById('edit-pronouns-custom').value.trim();
-        const deceased = document.getElementById('edit-deceased').checked;
-        const deathDate = deceased ? document.getElementById('edit-deathDate').value.trim() : '';
-        // Wedding/divorce
-        const weddingDate = document.getElementById('edit-weddingDate').value.trim();
-        const divorced = document.getElementById('edit-divorced').checked;
-        const divorceDate = divorced ? document.getElementById('edit-divorceDate').value.trim() : '';
-        // Update person in backend
-        await updatePersonAPI(personId, {
-            ...person,
-            nickname,
-            middleName,
-            pronouns,
-            deathDate,
-            marriages: [{
-                spouseId: editSelectedSpouseId,
-                weddingDate,
-                divorceDate: divorced ? divorceDate : undefined
-            }]
-        });
-        await updatePersonRelationships(personId, editSelectedParentIds, editSelectedChildrenIds, editSelectedSpouseId);
-        closeModal();
-        displayPersonDetails(personId);
     };
-    document.getElementById('cancel-relationships-btn').onclick = closeModal;
-    document.getElementById('close-modal-x').onclick = closeModal;
-    function escListener(e) { if (e.key === 'Escape') closeModal(); }
+
+    overlay.querySelector('#cancel-relationships-btn').addEventListener('click', closeModal);
+    overlay.querySelector('#close-modal-x').addEventListener('click', closeModal);
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay) {
+            closeModal();
+        }
+    });
+
+    const escListener = event => {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    };
     document.addEventListener('keydown', escListener);
-}
+
+    overlay.querySelector('#save-relationships-btn').addEventListener('click', async () => {
+        try {
+            const nickname = overlay.querySelector('#edit-nickname').value.trim();
+            const middleNameValue = overlay.querySelector('#edit-middleName').value.trim();
+            const pronounValue = pronounsSelect ? pronounsSelect.value : '';
+            const pronounCustom = pronounsCustomInput ? pronounsCustomInput.value.trim() : '';
+            const finalPronouns = pronounValue === 'custom' ? pronounCustom : pronounValue;
+            const isDeceased = deceasedCheckbox ? deceasedCheckbox.checked : false;
+            const deathDateValue = isDeceased && deathDateInput ? deathDateInput.value.trim() : '';
+            const weddingDateValue = overlay.querySelector('#edit-weddingDate').value.trim();
+            const isDivorced = divorcedCheckbox ? divorcedCheckbox.checked : false;
+            const divorceDateValue = isDivorced && divorceDateInput ? divorceDateInput.value.trim() : '';
+
+            const updatedPayload = {
+                ...person,
+                nickname,
+                middle_name: middleNameValue,
+                middleName: middleNameValue,
+                pronouns: finalPronouns,
+                deathDate: deathDateValue,
+                marriages: spouseId ? [{
+                    spouseId,
+                    weddingDate: weddingDateValue,
+                    divorceDate: isDivorced ? divorceDateValue : undefined
+                }] : []
+            };
+
+            await updatePersonAPI(personId, updatedPayload);
+            await updatePersonRelationships(
+                personId,
+                Array.from(parentIds),
+                Array.from(childIds),
+                spouseId || null
+            );
+
+            await loadFamilyDataFromAPI();
+            displayPersonDetails(personId);
+            closeModal();
+        } catch (error) {
+            console.error('Failed to save relationships:', error);
+            alert('Failed to save changes. Please try again.');
+        }
+    });
+};
 
 // Update tree and details display logic to use nickname if present, and show all new fields
 // ... existing code ...
@@ -2933,6 +3092,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup auth event listeners for the main app
     setupAuthEventListeners();
 });
+
+// Ensure the enhanced modal implementation is used everywhere
+showEditRelationshipsModal = enhancedShowEditRelationshipsModal;
 
 // Mark onboarding as completed when user finishes
 function completeOnboarding() {

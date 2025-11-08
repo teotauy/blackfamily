@@ -484,6 +484,22 @@ footer {
     font-weight: bold;
 }
 
+.relationship-modal .modal-section {
+    margin-bottom: 16px;
+}
+
+.relationship-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.relationship-modal .empty-selected {
+    color: #777;
+    font-size: 0.9em;
+}
+
 /* Search Section Styles */
 #search-section-container {
     padding: 10px 1em; /* Match main padding */
