@@ -203,7 +203,7 @@ async function uploadToBackend() {
     const successDiv = document.getElementById('csv-success');
     const uploadBtn = document.getElementById('upload-btn');
     
-    if (!onboardingAuthToken) {
+    if (!authToken) {
         errorDiv.textContent = 'Please login first';
         return;
     }
@@ -232,7 +232,7 @@ async function uploadToBackend() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${onboardingAuthToken}`
+                    'Authorization': `Bearer ${authToken}`
                 },
                 body: JSON.stringify(person)
             });
@@ -244,7 +244,14 @@ async function uploadToBackend() {
         
         successDiv.textContent = `Successfully uploaded ${peopleData.length} people!`;
         errorDiv.textContent = '';
-        nextStep();
+        await loadFamilyDataFromAPI();
+        renderFamilyTree();
+        renderUpcomingBirthdays();
+        const csvModal = document.getElementById('csv-upload-modal');
+        if (csvModal) {
+            csvModal.style.display = 'none';
+        }
+        csvData = [];
     } catch (error) {
         errorDiv.textContent = `Upload failed: ${error.message}`;
         successDiv.textContent = '';
@@ -833,6 +840,36 @@ function setupAppEventListeners() {
     // Setup for Relationship Finder autocompletes
     setupAutocomplete('person1-relationship-input', 'person1-relationship-suggestions', 'selected-person1-display', 'person1-relationship-id', 'relFinderPerson1');
     setupAutocomplete('person2-relationship-input', 'person2-relationship-suggestions', 'selected-person2-display', 'person2-relationship-id', 'relFinderPerson2');
+
+    const importCsvButton = document.getElementById('import-csv-button');
+    if (importCsvButton) {
+        importCsvButton.addEventListener('click', () => {
+            const csvModal = document.getElementById('csv-upload-modal');
+            if (csvModal) {
+                csvModal.style.display = 'block';
+            }
+        });
+    }
+
+    const csvFileInput = document.getElementById('csv-file');
+    if (csvFileInput) {
+        csvFileInput.addEventListener('change', handleCSVUpload);
+    }
+
+    const csvCancelBtn = document.querySelector('#csv-upload-modal button[onclick=\"closeCSVModal()\"]');
+    if (csvCancelBtn) {
+        csvCancelBtn.addEventListener('click', () => {
+            const csvModal = document.getElementById('csv-upload-modal');
+            if (csvModal) {
+                csvModal.style.display = 'none';
+            }
+        });
+    }
+
+    const csvUploadBtn = document.getElementById('upload-btn');
+    if (csvUploadBtn) {
+        csvUploadBtn.addEventListener('click', uploadToBackend);
+    }
 
     const addPersonForm = document.getElementById('add-person-form');
     if (addPersonForm) {
