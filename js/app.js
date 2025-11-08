@@ -135,6 +135,8 @@ async function handleRegister() {
     }
 }
 
+let csvFileInputInitialized = false;
+
 function handleCSVUpload(event) {
     const file = event.target.files[0];
     const errorDiv = document.getElementById('csv-error');
@@ -519,6 +521,7 @@ function logout() {
   currentUser = null;
   familyData = []; // Clear cached family data
   appEventListenersInitialized = false;
+  csvFileInputInitialized = false;
   localStorage.removeItem('authToken');
   
   // Clear any displayed content
@@ -890,8 +893,9 @@ function setupAppEventListeners() {
     }
 
     const csvFileInput = document.getElementById('csv-file');
-    if (csvFileInput) {
+    if (csvFileInput && !csvFileInputInitialized) {
         csvFileInput.addEventListener('change', handleCSVUpload);
+        csvFileInputInitialized = true;
     }
 
     const csvCancelBtn = document.querySelector('#csv-upload-modal button[onclick=\"closeCSVModal()\"]');
