@@ -217,32 +217,64 @@ async function uploadToBackend() {
     uploadBtn.disabled = true;
     
     try {
-        // Convert CSV data to the format your backend expects
-        const peopleData = csvData.map(row => ({
-            name: `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim(),
-            birthDate: row['DOB'] || row['Birth Date'] || '',
-            contact_email: row['Email'] || '',
-            contact_phone: row['Phone'] || '',
-            bio: `Imported from CSV: ${row['Notes'] || ''}`
-        }));
+        const normalizeValue = (val) => (val || '').trim().toLowerCase();
+        const toKey = (firstName, lastName, dob, phone) => {
+            return `${normalizeValue(firstName)}|${normalizeValue(lastName)}|${normalizeValue(dob)}|${normalizeValue(phone)}`;
+        };
+
+        const existingKeys = new Set(
+            familyData.map(person => {
+                // Attempt to split existing name into first/last
+                const parts = (person.name || '').trim().split(/\s+/);
+                const last = parts.length > 1 ? parts.pop() : '';
+                const first = parts.join(' ');
+                return toKey(first, last, person.birthDate || '', person.contact_phone || '');
+            })
+        );
+
+        let insertedCount = 0;
+        const peopleData = csvData.map(row => {
+            const firstName = row['First Name'] || '';
+            const lastName = row['Last Name'] || '';
+            const key = toKey(firstName, lastName, row['DOB'] || row['Birth Date'] || '', row['Phone'] || '');
+            const isDuplicate = existingKeys.has(key);
+            if (!isDuplicate) {
+                existingKeys.add(key);
+            }
+            return {
+                key,
+                skip: isDuplicate,
+                payload: {
+                    name: `${firstName} ${lastName}`.trim(),
+                    birthDate: row['DOB'] || row['Birth Date'] || '',
+                    contact_email: row['Email'] || '',
+                    contact_phone: row['Phone'] || '',
+                    bio: `Imported from CSV: ${row['Notes'] || ''}`
+                }
+            };
+        });
         
         // Upload each person to the backend
         for (const person of peopleData) {
+            if (person.skip) {
+                continue;
+            }
             const response = await fetch(`${API_BASE}/people`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${authToken}`
                 },
-                body: JSON.stringify(person)
+                body: JSON.stringify(person.payload)
             });
             
             if (!response.ok) {
                 throw new Error(`Failed to upload: ${response.statusText}`);
             }
+            insertedCount += 1;
         }
         
-        successDiv.textContent = `Successfully uploaded ${peopleData.length} people!`;
+        successDiv.textContent = `Added ${insertedCount} new people. Skipped ${peopleData.length - insertedCount} duplicates.`;
         errorDiv.textContent = '';
         await loadFamilyDataFromAPI();
         renderFamilyTree();
