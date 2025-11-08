@@ -2,7 +2,7 @@ const generationColors = ['#4A90E2', '#50E3C2', '#F5A623', '#BD10E0', '#7ED321',
 const defaultProfilePic = "images/placeholder_default.png"; // Path to your default placeholder
 
 // --- API URL ---
-const API_BASE = 'https://blackfamily-production.up.railway.app/api';
+const API_BASE = 'https://blackfamilybackend.onrender.com/api';
 
 // --- Onboarding State ---
 let currentStep = 1;
