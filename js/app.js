@@ -1363,11 +1363,24 @@ function setupAppEventListeners() {
 
     const csvUploadBtn = document.getElementById('upload-btn');
     if (csvUploadBtn) {
+        console.log('CSV upload button found, attaching click handler');
         csvUploadBtn.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             console.log('Upload button clicked');
-            uploadToBackend();
+            uploadToBackend().catch(err => {
+                console.error('Upload failed with error:', err);
+                const errorDiv = document.getElementById('csv-error');
+                if (errorDiv) {
+                    errorDiv.textContent = `Upload failed: ${err.message}`;
+                    errorDiv.style.display = 'block';
+                } else {
+                    alert(`CSV Upload failed: ${err.message}`);
+                }
+            });
         });
+    } else {
+        console.error('CSV upload button NOT FOUND!');
     }
 
     const addPersonForm = document.getElementById('add-person-form');
