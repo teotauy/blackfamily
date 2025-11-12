@@ -803,6 +803,11 @@ async function apiCall(endpoint, options = {}) {
     }
     completeLoaderRequest();
     hideGlobalLoader();
+    // Parse JSON response if content-type is JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    }
     return response;
   } catch (error) {
     console.error(`API call to ${endpoint} failed:`, error);
@@ -932,10 +937,28 @@ async function deletePersonAPI(id) {
 }
 
 async function addRelationshipAPI(person_id, related_id, type) {
-    await apiCall('/relationships', {
+    const response = await apiCall('/relationships', {
         method: 'POST',
         body: JSON.stringify({ person_id, related_id, type })
     });
+    
+    // Check for date warnings and show confirmation dialog
+    if (response && response.warning) {
+        const proceed = await showDateWarningDialog(response.warning);
+        if (!proceed) {
+            // User cancelled - we need to delete the relationship that was just created
+            if (response.id) {
+                try {
+                    await deleteRelationshipAPI(response.id);
+                } catch (err) {
+                    console.error('Failed to undo relationship creation:', err);
+                }
+            }
+            throw new Error('Relationship creation cancelled by user');
+        }
+    }
+    
+    return response;
 }
 
 async function deleteRelationshipAPI(relId) {
@@ -1767,6 +1790,76 @@ function displayPersonDetails(personId) {
     }
 }
 
+// Show date warning dialog - returns a Promise that resolves to true if user proceeds, false if cancelled
+function showDateWarningDialog(warning) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'date-warning-overlay';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 10000; display: flex; align-items: center; justify-content: center;';
+        
+        const dialog = document.createElement('div');
+        dialog.style.cssText = 'background: white; border-radius: 12px; padding: 24px; max-width: 500px; width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative;';
+        dialog.innerHTML = `
+            <div style="margin-bottom: 16px;">
+                <h3 style="margin: 0 0 8px 0; color: #d94b45; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.5rem;">⚠️</span>
+                    Date Warning
+                </h3>
+                <p style="margin: 0; color: #333; line-height: 1.5;">
+                    ${warning.message}
+                </p>
+                <p style="margin: 12px 0 0 0; color: #666; font-size: 0.9rem;">
+                    This might be a data entry error. Would you like to proceed anyway?
+                </p>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                <button id="date-warning-cancel" style="padding: 10px 20px; border: 2px solid #ccc; background: white; border-radius: 6px; cursor: pointer; font-weight: 600; color: #666;">
+                    Cancel
+                </button>
+                <button id="date-warning-proceed" style="padding: 10px 20px; border: none; background: #d94b45; border-radius: 6px; cursor: pointer; font-weight: 600; color: white;">
+                    Proceed Anyway
+                </button>
+            </div>
+        `;
+        
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+        
+        const cleanup = () => {
+            document.body.removeChild(overlay);
+        };
+        
+        document.getElementById('date-warning-proceed').addEventListener('click', () => {
+            cleanup();
+            resolve(true);
+        });
+        
+        document.getElementById('date-warning-cancel').addEventListener('click', () => {
+            cleanup();
+            resolve(false);
+        });
+        
+        // Close on Escape key
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                cleanup();
+                document.removeEventListener('keydown', escapeHandler);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+        
+        // Close on overlay click (but not on dialog click)
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                cleanup();
+                document.removeEventListener('keydown', escapeHandler);
+                resolve(false);
+            }
+        });
+    });
+}
+
 // Show image popup modal
 function showImagePopup(imageSrc, personName) {
     const overlay = document.createElement('div');
@@ -2094,7 +2187,10 @@ async function updatePersonRelationships(personId, newParentIds, newChildIds, ne
         renderUpcomingBirthdays();
     } catch (error) {
         console.error('Failed to update relationships:', error);
-        alert(error.message || 'Failed to update relationships. Please try again.');
+        // Don't show alert if user cancelled - that's expected behavior
+        if (!error.message || !error.message.includes('cancelled')) {
+            alert(error.message || 'Failed to update relationships. Please try again.');
+        }
         throw error;
     }
 }

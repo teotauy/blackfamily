@@ -310,13 +310,17 @@ app.get('/api/relationships', (req, res) => {
 app.post('/api/relationships', (req, res) => {
   const { person_id, related_id, type } = req.body;
 
-  const insertRelationship = () => {
+  const insertRelationship = (warning = null) => {
     db.run(
       'INSERT OR IGNORE INTO relationships (person_id, related_id, type) VALUES (?, ?, ?)',
       [person_id, related_id, type],
       function(err) {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID, inserted: this.changes > 0 });
+        const response = { id: this.lastID, inserted: this.changes > 0 };
+        if (warning) {
+          response.warning = warning;
+        }
+        res.json(response);
       }
     );
   };
@@ -333,26 +337,31 @@ app.post('/api/relationships', (req, res) => {
         const parentDate = parentRow && parentRow.birthDate ? parseFamilyDate(parentRow.birthDate) : null;
         const childDate = childRow && childRow.birthDate ? parseFamilyDate(childRow.birthDate) : null;
 
-        // Only validate if both dates exist and are valid
-        // If parent date is missing, allow the relationship (user can add date later)
+        // Check for date warnings (but don't block - let user decide)
+        let dateWarning = null;
         if (parentDate && childDate) {
           // Compare years for year-only dates, full dates otherwise
           const parentYear = parentDate.getFullYear();
           const childYear = childDate.getFullYear();
           
-          // If parent year is >= child year, that's invalid
+          // If parent year is >= child year, that's suspicious
           if (parentYear >= childYear) {
             const parentName = parentRow ? parentRow.name : 'Parent';
             const childName = childRow ? childRow.name : 'Child';
             const parentDateStr = parentRow.birthDate || 'Unknown';
             const childDateStr = childRow.birthDate || 'Unknown';
-            return res.status(400).json({
-              error: `Parent birth date must be earlier than the child's birth date. ${parentName}'s birth date (${parentDateStr}) must be before ${childName}'s birth date (${childDateStr}). Please verify the dates.`
-            });
+            dateWarning = {
+              message: `Parent birth date appears to be later than the child's birth date. ${parentName}'s birth date (${parentDateStr}) is ${parentYear >= childYear ? 'after' : 'the same as'} ${childName}'s birth date (${childDateStr}).`,
+              parentName: parentName,
+              childName: childName,
+              parentDate: parentDateStr,
+              childDate: childDateStr
+            };
           }
         }
 
-        insertRelationship();
+        // Always insert the relationship, but include warning if dates look suspicious
+        insertRelationship(dateWarning);
       });
     });
   } else {
