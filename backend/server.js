@@ -9,6 +9,16 @@ function parseFamilyDate(value) {
   const trimmed = String(value).trim();
   if (!trimmed) return null;
 
+  // Handle year-only format (e.g., "1955")
+  const yearOnly = /^\d{4}$/.test(trimmed);
+  if (yearOnly) {
+    const year = parseInt(trimmed, 10);
+    if (!isNaN(year) && year >= 1000 && year <= 9999) {
+      // Use January 1st of that year for comparison purposes
+      return new Date(year, 0, 1);
+    }
+  }
+
   const direct = new Date(trimmed);
   if (!isNaN(direct.getTime())) {
     return direct;
@@ -315,14 +325,21 @@ app.post('/api/relationships', (req, res) => {
 
         // Only validate if both dates exist and are valid
         // If parent date is missing, allow the relationship (user can add date later)
-        if (parentDate && childDate && parentDate >= childDate) {
-          const parentName = parentRow ? parentRow.name : 'Parent';
-          const childName = childRow ? childRow.name : 'Child';
-          const parentDateStr = parentRow.birthDate || 'Unknown';
-          const childDateStr = childRow.birthDate || 'Unknown';
-          return res.status(400).json({
-            error: `Parent birth date must be earlier than the child's birth date. ${parentName}'s birth date (${parentDateStr}) must be before ${childName}'s birth date (${childDateStr}). Please verify the dates.`
-          });
+        if (parentDate && childDate) {
+          // Compare years for year-only dates, full dates otherwise
+          const parentYear = parentDate.getFullYear();
+          const childYear = childDate.getFullYear();
+          
+          // If parent year is >= child year, that's invalid
+          if (parentYear >= childYear) {
+            const parentName = parentRow ? parentRow.name : 'Parent';
+            const childName = childRow ? childRow.name : 'Child';
+            const parentDateStr = parentRow.birthDate || 'Unknown';
+            const childDateStr = childRow.birthDate || 'Unknown';
+            return res.status(400).json({
+              error: `Parent birth date must be earlier than the child's birth date. ${parentName}'s birth date (${parentDateStr}) must be before ${childName}'s birth date (${childDateStr}). Please verify the dates.`
+            });
+          }
         }
 
         insertRelationship();
