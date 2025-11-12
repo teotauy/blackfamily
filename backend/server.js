@@ -264,8 +264,19 @@ app.post('/api/people', (req, res) => {
 app.put('/api/people/:id', (req, res) => {
   const id = req.params.id;
   const p = req.body;
+  const birthDate = normalizeDateToYYYYMMDD(p.birthDate || p.birth_date);
+  const deathDate = normalizeDateToYYYYMMDD(p.deathDate || p.death_date);
+  
+  // Validate dates - if provided but invalid, return error
+  if ((p.birthDate || p.birth_date) && !birthDate) {
+    return res.status(400).json({ error: 'Birth date must use 4-digit year (YYYY-MM-DD or MM/DD/YYYY format). Example: 1976-03-19 or 03/19/1976' });
+  }
+  if ((p.deathDate || p.death_date) && !deathDate) {
+    return res.status(400).json({ error: 'Death date must use 4-digit year (YYYY-MM-DD or MM/DD/YYYY format). Example: 2020-01-15 or 01/15/2020' });
+  }
+  
   db.run(`UPDATE people SET name=?, middle_name=?, maiden_name=?, nickname=?, birthDate=?, deathDate=?, pronouns=?, bio=?, notes=?, contact_email=?, contact_phone=?, contact_street=?, contact_city=?, contact_state=?, contact_zip=?, can_receive_sms=? WHERE id=?`,
-    [p.name, p.middle_name, p.maiden_name, p.nickname, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure', id],
+    [p.name, p.middle_name, p.maiden_name, p.nickname, birthDate, deathDate, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure', id],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ changes: this.changes });
