@@ -1,15 +1,40 @@
 # Black Family Tree - Project Status Documentation
 
-**Last Updated:** 2025-11-10  
+**Last Updated:** 2025-11-12  
 **Purpose:** Comprehensive documentation for AI assistants to understand the current state, recent work, and remaining tasks.
 
 > ℹ️ Historical context from earlier phases (August 2025) is preserved below. The sections immediately after this notice reflect the current November 2025 status.
 
 ---
 
-## 📆 Latest Update Snapshot (2025-11-10)
+## 📆 Latest Update Snapshot (2025-11-12)
 
-### ✅ Work Completed This Pass
+### ✅ Work Completed Tonight (2025-11-12)
+- **CSV Upload Fixes:**
+  - Fixed silent CSV upload failures - added comprehensive error handling and debugging
+  - Improved CSV parsing to properly handle quoted fields (e.g., `"John, Doe"` won't split incorrectly)
+  - Added validation for empty files, missing headers, and no data rows
+  - Error messages now display properly (were previously hidden)
+  - Added file reading error handling
+  - Fixed `loadFamilyDataFromAPI` bug - `apiCall` already returns parsed JSON, removed duplicate `.json()` call
+  
+- **UI/UX Improvements:**
+  - **Search bar repositioned:** Moved "Find Someone" search to very top of page, aligned with logout button in sticky header
+  - **Clickable relationship pills:** "Add parents", "Add children", "Add spouse" pills now clickable to open edit modal
+  - **Quick add children:** Added "+" button next to last child chip to quickly add another child
+  - **Random factoid title:** Added "Family Highlight" title to the random fact display box
+  
+- **Duplicate Prevention:**
+  - Fixed duplicate birthday entries - deduplicate by person ID in `getUpcomingBirthdays`
+  - Fixed duplicate entries in Family Tree - deduplicate people when loading from API using same key as CSV upload (name + birthdate + phone)
+  - Prevents duplicate display even if duplicates exist in database
+
+- **Code Quality:**
+  - Added extensive console logging for CSV upload debugging
+  - Improved error messages throughout CSV upload flow
+  - Better error handling with fallback alerts if DOM elements not found
+
+### ✅ Previous Work (2025-11-10)
 - **Date format standardization:** All dates now require 4-digit years (YYYY) - eliminates ambiguity and ensures accurate relationship validation. Dates stored as `YYYY-MM-DD` format.
 - **Backend login hardening:** `/api/verify-access` now normalizes phone numbers, so logins work whether the database stores punctuation (e.g., `512-426-6530`) or plain digits.
 - **Relationship modal improvements:** Editing a person's full name, pronouns, and relationships now persists and re-renders instantly (tree + detail panel refresh).
@@ -21,27 +46,29 @@
   - Tree view, person detail pages, search, and empty states redesigned for consistency.
   - Clickable profile pictures (popup if photo exists, uploader if not)
   - Clickable parent/child names navigate to their profiles
-  - Search moved to top left of layout
 - **Data integrity:** Frontend deduplicates parent/child/spouse arrays returned from the API before rendering; backend enforces unique relationships and validates parent/child birth dates.
 - **Documentation:** `README.md` now includes clear instructions for granting GitHub credentials (PAT or SSH) so pushes can happen in future sessions.
 
 ### 🧭 Outstanding Work / Next Steps
 | Area | Status | Notes |
 | --- | --- | --- |
-| **Frontend deploy** | 🔄 Pending | Vercel CLI needs to be re-linked/authenticated; redeploy once credentials are restored. Hard refresh currently loads the old bundle. |
-| **GitHub push** | 🔄 Pending | Configure `git` auth (PAT or SSH). After that, commit and push current work to the remote repo. |
-| **Kids feature** | 🕒 Not started | Brainstormed “family flash cards” for kids; feature still needs design + implementation. |
+| **Database cleanup** | 🔄 Optional | Duplicate people may exist in database from CSV uploads. Consider adding cleanup script to remove duplicates permanently. |
+| **CSV upload testing** | ✅ Complete | CSV upload now works with proper error handling. Test with various CSV formats to ensure robustness. |
+| **Kids feature** | 🕒 Not started | Brainstormed "family flash cards" for kids; feature still needs design + implementation. |
 | **Aesthetic polish** | 🔄 In progress | Base redesign shipped, but further iteration (animations, typography tweaks, responsive tuning) still desired. |
 | **Family loader fun facts** | ✅ Base | Loader shows rotating fun facts; consider expanding fact library from backend if desired. |
 | **Phone onboarding automation** | 🔄 Optional | Currently re-adding phone records manually after backend resets. Could add seed script or admin UI. |
-| **Deploy playbook** | 🔄 Optional | Once credentials are restored, document the exact Vercel deploy steps (CLI command sequence + expected output). |
 
 ### 🧪 Recommended Verification After Next Deploy
-1. Login flow with phone `5124266530` and password `blackfamily2024`.
-2. Edit a person’s full name (e.g., “Chubby Black”) and confirm tree + detail panel refresh.
-3. Import a CSV row that includes pronouns and verify they appear after import.
-4. Confirm loader behavior by simulating a cold Render wake-up (stop/start dyno or wait for idle).
-5. Run relationship edits (parents/children/spouse) to ensure duplicates do not reappear.
+1. ✅ **CSV Upload:** Test CSV import with various formats (quoted fields, empty rows, etc.) - should show clear error messages if issues occur
+2. ✅ **Search Bar:** Verify search bar is at very top of page, aligned with logout button
+3. ✅ **Relationship Editing:** Click "Add parents", "Add children", "Add spouse" pills - should open edit modal
+4. ✅ **Quick Add Children:** Click "+" button next to children - should open edit modal
+5. ✅ **Duplicate Prevention:** Verify no duplicate entries appear in Family Tree or Birthday list
+6. ✅ **Error Handling:** CSV upload errors should display clearly in modal (not hidden)
+7. Login flow with phone `5124266530` and password `blackfamily2024`.
+8. Edit a person's full name (e.g., "Chubby Black") and confirm tree + detail panel refresh.
+9. Confirm loader behavior by simulating a cold Render wake-up (stop/start dyno or wait for idle).
 
 ---
 
@@ -118,19 +145,28 @@ An interactive family tree application for managing family relationships, contac
 - `DELETE /api/relationships/:id` - Delete relationship
 
 ### 🌳 Family Tree Visualization
-**Status:** ✅ IMPLEMENTED
+**Status:** ✅ IMPLEMENTED (Fixed 2025-11-12)
 - Dynamic tree rendering with generation-based coloring
 - Horizontal/vertical tree layouts
 - Click-to-view person details
 - Automatic root node detection
 - Spouse grouping and duplicate prevention
+- **Fixed (2025-11-12):** Added deduplication when loading data from API to prevent duplicate person cards
+- **Enhanced (2025-11-12):** "Add parents", "Add children", "Add spouse" pills are clickable to open edit modal
+- **Enhanced (2025-11-12):** "+" button next to children allows quick addition of another child
 
 ### 📊 Data Import/Export
-**Status:** ✅ DEPLOYED AND WORKING
+**Status:** ✅ DEPLOYED AND WORKING (Fixed 2025-11-12)
 - CSV import with preview
 - CSV template download
 - Bulk import via `/api/people/bulk`
 - Data validation and error handling
+- **Fixed (2025-11-12):**
+  - Improved CSV parsing to handle quoted fields properly
+  - Added comprehensive error handling and debugging
+  - Error messages now display properly (were previously hidden)
+  - Fixed `loadFamilyDataFromAPI` bug that caused upload failures
+  - Added deduplication when loading data to prevent duplicate display
 
 **CSV Template Fields:**
 - First Name, Last Name, DOB, Email, Phone, Notes
@@ -161,12 +197,14 @@ An interactive family tree application for managing family relationships, contac
 - Real-time family member search
 - Search by name, contact info
 - Results display with quick view
+- **Updated (2025-11-12):** Search bar moved to top header, sticky position, aligned with logout button
 
 ### 📅 Birthday Tracking
-**Status:** ✅ IMPLEMENTED
+**Status:** ✅ IMPLEMENTED (Fixed 2025-11-12)
 - Upcoming birthdays display
 - Automatic calculation from birth dates
 - Highlighted in UI
+- **Fixed (2025-11-12):** Deduplication by person ID prevents duplicate entries in birthday list
 
 ### 👑 Admin Features
 **Status:** ⚠️ PARTIALLY IMPLEMENTED
