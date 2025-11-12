@@ -227,11 +227,42 @@ app.get('/api/people/:id', (req, res) => {
   });
 });
 
-// Helper to normalize date to YYYY-MM-DD format (requires 4-digit year)
-function normalizeDateToYYYYMMDD(dateStr) {
+// Helper to convert 2-digit year to 4-digit year (for CSV imports)
+function convertTwoDigitYear(yearStr) {
+  if (!yearStr || yearStr.length !== 2) return null;
+  const yearNum = parseInt(yearStr, 10);
+  if (isNaN(yearNum)) return null;
+  // Convert: 00-30 → 2000-2030, 31-99 → 1931-1999
+  if (yearNum <= 30) {
+    return 2000 + yearNum;
+  } else {
+    return 1900 + yearNum;
+  }
+}
+
+// Helper to normalize date to YYYY-MM-DD format
+// For CSV imports: converts 2-digit years to 4-digit years
+// For new entries: requires 4-digit years (strict mode)
+function normalizeDateToYYYYMMDD(dateStr, allowTwoDigitYears = false) {
   if (!dateStr) return null;
+  
+  // If allowing 2-digit years (CSV import), try to convert them first
+  if (allowTwoDigitYears) {
+    const parts = String(dateStr).trim().split(/[\/\-]/);
+    if (parts.length === 3) {
+      const [month, day, year] = parts.map(p => p.trim());
+      if (year.length === 2) {
+        const convertedYear = convertTwoDigitYear(year);
+        if (convertedYear) {
+          // Reconstruct with 4-digit year
+          dateStr = `${month}/${day}/${convertedYear}`;
+        }
+      }
+    }
+  }
+  
   const parsed = parseFamilyDate(dateStr);
-  if (!parsed) return null; // Invalid date (likely 2-digit year)
+  if (!parsed) return null; // Invalid date
   const year = parsed.getFullYear();
   const month = String(parsed.getMonth() + 1).padStart(2, '0');
   const day = String(parsed.getDate()).padStart(2, '0');
@@ -302,14 +333,14 @@ app.post('/api/people/bulk', (req, res) => {
     return res.status(400).json({ error: 'Expected an array of people' });
   }
   
-  // Normalize dates to YYYY-MM-DD format (requires 4-digit years)
+  // Normalize dates to YYYY-MM-DD format (allow 2-digit years for CSV imports)
   const normalizedPeople = people.map(p => ({
     ...p,
-    birthDate: normalizeDateToYYYYMMDD(p.birth_date || p.birthDate),
-    deathDate: normalizeDateToYYYYMMDD(p.death_date || p.deathDate)
+    birthDate: normalizeDateToYYYYMMDD(p.birth_date || p.birthDate, true), // allow 2-digit years
+    deathDate: normalizeDateToYYYYMMDD(p.death_date || p.deathDate, true) // allow 2-digit years
   }));
   
-  // Check for invalid dates
+  // Check for invalid dates (after conversion attempt)
   const invalidDates = normalizedPeople.filter((p, idx) => {
     const original = people[idx];
     return (original.birth_date || original.birthDate) && !p.birthDate ||
@@ -318,7 +349,7 @@ app.post('/api/people/bulk', (req, res) => {
   
   if (invalidDates.length > 0) {
     return res.status(400).json({ 
-      error: `Invalid dates found. All dates must use 4-digit years (YYYY-MM-DD or MM/DD/YYYY). Found ${invalidDates.length} person(s) with invalid dates.` 
+      error: `Invalid dates found. Dates must be in YYYY-MM-DD or MM/DD/YYYY format (2-digit years like MM/DD/YY are converted automatically). Found ${invalidDates.length} person(s) with invalid dates.` 
     });
   }
   
