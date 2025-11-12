@@ -1593,21 +1593,21 @@ function displayPersonDetails(personId) {
         }
         const metaGridHtml = `<div class="person-meta-grid">${metaCards.join('')}</div>`;
 
-        const renderRelationChips = (names, emptyText) => {
-            if (!names.length) {
+        const renderRelationChips = (people, emptyText) => {
+            if (!people.length) {
                 return `<span class="empty-pill">${emptyText}</span>`;
             }
-            return names.map(label => `<span class="relation-chip">${label}</span>`).join('');
+            return people.map(relative => 
+                `<span class="relation-chip clickable-relation" data-person-id="${relative.id}">${relative.nickname || relative.name}</span>`
+            ).join('');
         };
 
-        const parentNames = Array.from(person.parents || [])
+        const parentPeople = Array.from(person.parents || [])
             .map(id => relativeMap.get(id))
-            .filter(Boolean)
-            .map(relative => relative.nickname || relative.name);
-        const childrenNames = Array.from(person.children || [])
+            .filter(Boolean);
+        const childrenPeople = Array.from(person.children || [])
             .map(id => relativeMap.get(id))
-            .filter(Boolean)
-            .map(relative => relative.nickname || relative.name);
+            .filter(Boolean);
         const spouseChipsList = (person.marriages || [])
             .map(marriage => {
                 const spouse = relativeMap.get(marriage.spouseId);
@@ -1619,8 +1619,8 @@ function displayPersonDetails(personId) {
             })
             .filter(Boolean);
 
-        const parentsHtml = renderRelationChips(parentNames, 'Add parents');
-        const childrenHtml = renderRelationChips(childrenNames, 'Add children');
+        const parentsHtml = renderRelationChips(parentPeople, 'Add parents');
+        const childrenHtml = renderRelationChips(childrenPeople, 'Add children');
         const spouseHtml = spouseChipsList.length ? spouseChipsList.join('') : `<span class="empty-pill">Add spouse</span>`;
 
         const contactRows = [];
@@ -1673,7 +1673,7 @@ function displayPersonDetails(personId) {
         const detailsHTML = `
           <div class="person-hero">
             <div class="hero-avatar">
-              <img src="${person.profilePic || defaultProfilePic}" alt="Profile picture of ${preferredName}" class="person-avatar">
+              <img src="${person.profilePic || defaultProfilePic}" alt="Profile picture of ${preferredName}" class="person-avatar clickable-avatar" data-person-id="${person.id}" data-has-pic="${person.profilePic ? 'true' : 'false'}">
             </div>
             <div class="hero-info">
               <h2>${preferredName}</h2>
@@ -1725,6 +1725,33 @@ function displayPersonDetails(personId) {
             console.warn(`Tree node for person ID ${person.id} not found.`);
         }
 
+        // Attach event listener for profile picture click
+        const avatarImg = document.querySelector('.clickable-avatar');
+        if (avatarImg) {
+            avatarImg.style.cursor = 'pointer';
+            avatarImg.addEventListener('click', function() {
+                const hasPic = this.getAttribute('data-has-pic') === 'true';
+                if (hasPic) {
+                    // Show image in popup
+                    showImagePopup(this.src, preferredName);
+                } else {
+                    // Open uploader (for now, just show a message - upload functionality can be added later)
+                    alert('Photo upload functionality coming soon! For now, you can add photos via the Edit Profile button.');
+                }
+            });
+        }
+
+        // Attach event listeners for clickable relation chips
+        document.querySelectorAll('.clickable-relation').forEach(chip => {
+            chip.style.cursor = 'pointer';
+            chip.addEventListener('click', function() {
+                const relatedPersonId = parseInt(this.getAttribute('data-person-id'));
+                if (relatedPersonId) {
+                    displayPersonDetails(relatedPersonId);
+                }
+            });
+        });
+
         // Attach event listener for Edit Relationships
         document.getElementById('edit-relationships-btn').onclick = function() {
             showEditRelationshipsModal(personId);
@@ -1738,6 +1765,42 @@ function displayPersonDetails(personId) {
         detailsContainer.classList.remove('person-selected');
         personInfoDiv.innerHTML = getDefaultPersonCardMarkup();
     }
+}
+
+// Show image popup modal
+function showImagePopup(imageSrc, personName) {
+    const overlay = document.createElement('div');
+    overlay.className = 'image-popup-overlay';
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+    
+    const popup = document.createElement('div');
+    popup.style.cssText = 'max-width: 90vw; max-height: 90vh; position: relative;';
+    popup.innerHTML = `
+        <img src="${imageSrc}" alt="${personName}" style="max-width: 100%; max-height: 90vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+        <button class="image-popup-close" style="position: absolute; top: -40px; right: 0; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #333;">&times;</button>
+    `;
+    
+    overlay.appendChild(popup);
+    document.body.appendChild(overlay);
+    
+    const closePopup = () => {
+        document.body.removeChild(overlay);
+    };
+    
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay || e.target.classList.contains('image-popup-close')) {
+            closePopup();
+        }
+    });
+    
+    // Close on Escape key
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closePopup();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
 }
 
 function renderUpcomingBirthdays() {

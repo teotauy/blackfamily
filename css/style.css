@@ -290,6 +290,12 @@ button.small {
     object-fit: cover;
     border: 3px solid rgba(255, 255, 255, 0.85);
     box-shadow: var(--shadow-tight);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.person-avatar.clickable-avatar:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
 }
 
 .hero-info h2 {
@@ -430,6 +436,16 @@ button.small {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.relation-chip.clickable-relation {
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.relation-chip.clickable-relation:hover {
+    background-color: rgba(242, 92, 84, 0.15);
+    transform: translateY(-1px);
 }
 
 .relation-chip {
