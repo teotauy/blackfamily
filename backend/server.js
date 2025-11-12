@@ -32,12 +32,12 @@ function parseFamilyDate(value) {
       if (!isNaN(yearNum)) {
         if (year.length === 2) {
           // For family tree data, assume two-digit years are from 1900s
-          // Only treat very recent years (00-20) as 2000s
-          // This handles cases like "35" → 1935, not 2035
-          if (yearNum <= 20) {
-            yearNum += 2000; // 00-20 → 2000-2020
+          // Treat recent years (00-30) as 2000s to handle recent births
+          // This handles cases like "21" → 2021, "35" → 1935
+          if (yearNum <= 30) {
+            yearNum += 2000; // 00-30 → 2000-2030
           } else {
-            yearNum += 1900; // 21-99 → 1921-1999
+            yearNum += 1900; // 31-99 → 1931-1999
           }
         }
         const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
