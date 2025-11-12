@@ -1,7 +1,44 @@
 # Black Family Tree - Project Status Documentation
 
-**Last Updated:** 2025-08-20  
-**Purpose:** Comprehensive documentation for AI assistants to understand the current state, features, and deployment issues
+**Last Updated:** 2025-11-10  
+**Purpose:** Comprehensive documentation for AI assistants to understand the current state, recent work, and remaining tasks.
+
+> ℹ️ Historical context from earlier phases (August 2025) is preserved below. The sections immediately after this notice reflect the current November 2025 status.
+
+---
+
+## 📆 Latest Update Snapshot (2025-11-10)
+
+### ✅ Work Completed This Pass
+- **Backend login hardening:** `/api/verify-access` now normalizes phone numbers, so logins work whether the database stores punctuation (e.g., `512-426-6530`) or plain digits.
+- **Relationship modal improvements:** Editing a person’s full name, pronouns, and relationships now persists and re-renders instantly (tree + detail panel refresh).
+- **CSV import polish:** Preferred pronoun columns are imported into person records; deduplication still respects name/DOB/phone keys.
+- **UI/UX refresh:** 
+  - Two-column dashboard layout with card-based sections and modern styling inspired by OneClock.
+  - Global loader with friendly messaging/fun facts for Render cold starts and retry support.
+  - Tree view, person detail pages, search, and empty states redesigned for consistency.
+- **Data integrity:** Frontend deduplicates parent/child/spouse arrays returned from the API before rendering; backend enforces unique relationships and validates parent/child birth dates.
+- **Documentation:** `README.md` now includes clear instructions for granting GitHub credentials (PAT or SSH) so pushes can happen in future sessions.
+
+### 🧭 Outstanding Work / Next Steps
+| Area | Status | Notes |
+| --- | --- | --- |
+| **Frontend deploy** | 🔄 Pending | Vercel CLI needs to be re-linked/authenticated; redeploy once credentials are restored. Hard refresh currently loads the old bundle. |
+| **GitHub push** | 🔄 Pending | Configure `git` auth (PAT or SSH). After that, commit and push current work to the remote repo. |
+| **Kids feature** | 🕒 Not started | Brainstormed “family flash cards” for kids; feature still needs design + implementation. |
+| **Aesthetic polish** | 🔄 In progress | Base redesign shipped, but further iteration (animations, typography tweaks, responsive tuning) still desired. |
+| **Family loader fun facts** | ✅ Base | Loader shows rotating fun facts; consider expanding fact library from backend if desired. |
+| **Phone onboarding automation** | 🔄 Optional | Currently re-adding phone records manually after backend resets. Could add seed script or admin UI. |
+| **Deploy playbook** | 🔄 Optional | Once credentials are restored, document the exact Vercel deploy steps (CLI command sequence + expected output). |
+
+### 🧪 Recommended Verification After Next Deploy
+1. Login flow with phone `5124266530` and password `blackfamily2024`.
+2. Edit a person’s full name (e.g., “Chubby Black”) and confirm tree + detail panel refresh.
+3. Import a CSV row that includes pronouns and verify they appear after import.
+4. Confirm loader behavior by simulating a cold Render wake-up (stop/start dyno or wait for idle).
+5. Run relationship edits (parents/children/spouse) to ensure duplicates do not reappear.
+
+---
 
 ---
 

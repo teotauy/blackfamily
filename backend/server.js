@@ -4,6 +4,44 @@ const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+function parseFamilyDate(value) {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  const direct = new Date(trimmed);
+  if (!isNaN(direct.getTime())) {
+    return direct;
+  }
+
+  const parts = trimmed.split(/[\/\-]/);
+  if (parts.length === 3) {
+    let [month, day, year] = parts.map(part => part.trim());
+    const monthNum = parseInt(month, 10);
+    const dayNum = parseInt(day, 10);
+    let yearNum = parseInt(year, 10);
+
+    if (!isNaN(monthNum) && !isNaN(dayNum)) {
+      if (!isNaN(yearNum)) {
+        if (year.length === 2) {
+          yearNum += yearNum >= 50 ? 1900 : 2000;
+        }
+        const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
+        if (!isNaN(reconstructed.getTime())) {
+          return reconstructed;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizePhone(value) {
+  if (!value) return '';
+  return String(value).replace(/\D+/g, '');
+}
+
 // Simple password for family access
 const FAMILY_PASSWORD = 'blackfamily2024';
 
@@ -30,13 +68,15 @@ app.get('/health', (req, res) => {
 // Phone + Password verification endpoint
 app.post('/api/verify-access', (req, res) => {
   const { phone, password } = req.body;
+  const normalizedPhone = normalizePhone(phone);
   
   // First check if phone exists in family database
-  db.get('SELECT id FROM people WHERE contact_phone = ?', [phone], (err, person) => {
+  db.all('SELECT id, contact_phone FROM people', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: 'Database error' });
     }
-    
+    const person = rows.find(row => normalizePhone(row.contact_phone) === normalizedPhone);
+
     if (!person) {
       return res.status(401).json({ error: 'Phone number not found in family database' });
     }
@@ -113,6 +153,29 @@ db.serialize(() => {
       console.error('Error adding nickname column:', err);
     }
   });
+
+  // Deduplicate existing relationship rows and enforce uniqueness
+  db.run(
+    `DELETE FROM relationships
+     WHERE id NOT IN (
+       SELECT MIN(id) FROM relationships GROUP BY person_id, related_id, type
+     )`,
+    (err) => {
+      if (err) {
+        console.error('Error deduplicating relationships:', err);
+      }
+    }
+  );
+
+  db.run(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_relationship_unique
+     ON relationships(person_id, related_id, type)`,
+    (err) => {
+      if (err && !err.message.includes('already exists')) {
+        console.error('Error creating unique index for relationships:', err);
+      }
+    }
+  );
 });
 
 // --- API Endpoints ---
@@ -212,7 +275,12 @@ app.post('/api/people/bulk', (req, res) => {
 
 // Get all relationships
 app.get('/api/relationships', (req, res) => {
-  db.all('SELECT * FROM relationships', [], (err, rows) => {
+  db.all(
+    `SELECT MIN(id) as id, person_id, related_id, type
+     FROM relationships
+     GROUP BY person_id, related_id, type`,
+    [],
+    (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -221,10 +289,42 @@ app.get('/api/relationships', (req, res) => {
 // Add a relationship
 app.post('/api/relationships', (req, res) => {
   const { person_id, related_id, type } = req.body;
-  db.run('INSERT INTO relationships (person_id, related_id, type) VALUES (?, ?, ?)', [person_id, related_id, type], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID });
-  });
+
+  const insertRelationship = () => {
+    db.run(
+      'INSERT OR IGNORE INTO relationships (person_id, related_id, type) VALUES (?, ?, ?)',
+      [person_id, related_id, type],
+      function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, inserted: this.changes > 0 });
+      }
+    );
+  };
+
+  if (type === 'parent' || type === 'child') {
+    const childId = type === 'parent' ? person_id : related_id;
+    const parentId = type === 'parent' ? related_id : person_id;
+
+    db.get('SELECT id, birthDate FROM people WHERE id = ?', [parentId], (parentErr, parentRow) => {
+      if (parentErr) return res.status(500).json({ error: parentErr.message });
+      db.get('SELECT id, birthDate FROM people WHERE id = ?', [childId], (childErr, childRow) => {
+        if (childErr) return res.status(500).json({ error: childErr.message });
+
+        const parentDate = parentRow ? parseFamilyDate(parentRow.birthDate) : null;
+        const childDate = childRow ? parseFamilyDate(childRow.birthDate) : null;
+
+        if (parentDate && childDate && parentDate >= childDate) {
+          return res.status(400).json({
+            error: 'Parent birth date must be earlier than the child’s birth date. Please verify the dates.'
+          });
+        }
+
+        insertRelationship();
+      });
+    });
+  } else {
+    insertRelationship();
+  }
 });
 
 // Delete a relationship

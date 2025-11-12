@@ -10,6 +10,16 @@
 </head>
 <body>
     <div id="header-auth-section"></div>
+    <div id="global-loader" class="global-loader" aria-hidden="true">
+      <div class="loader-content" role="status" aria-live="polite">
+        <div class="loader-spinner"></div>
+        <div class="loader-message">
+          <p id="loader-primary-text">Warming up the family server…</p>
+          <p id="loader-secondary-text"></p>
+        </div>
+        <button id="loader-retry-button" type="button" class="loader-retry">Retry</button>
+      </div>
+    </div>
     <div id="onboarding-overlay" style="display:none"></div>
     <div id="auth-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:2000;">
       <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:10px; max-width:400px; width:90%;">
@@ -28,70 +38,75 @@
     </div>
     <!-- Family Tree App (hidden initially, shown after password) -->
     <div id="family-tree-app" style="display: none;">
-        <header>
-            <h1>Family Tree</h1>
+        <header class="app-header">
+            <div class="app-header-copy">
+                <h1>Black Family Tree</h1>
+                <p class="app-subtitle">Stories, milestones, and the people you love—kept close.</p>
+            </div>
         </header>
 
-        <main id="main-content" style="display:none;">
-          <div id="random-fact-display"></div>
-          <div id="actions-toolbar">
-            <button id="add-person-button" type="button">Add Person</button>
-            <button id="import-csv-button" type="button" style="margin-left: 10px; background: #17a2b8; color: white;">Import CSV</button>
-            <button id="generate-holiday-card-pdf-button" type="button" style="margin-left: 10px;" onclick="generateHolidayCardPDF()">Generate Holiday Card Mailing Labels (PDF)</button>
-            <button id="generate-individual-labels-pdf-button" type="button" style="margin-left: 10px;" onclick="generateIndividualMailingLabelsPDF()">Generate Individual Mailing Labels</button>
-            <button id="generate-birthday-list-pdf-button" type="button" style="margin-left: 10px;" onclick="generateBirthdayListPDF()">Generate Birthday List (PDF)</button>
-            <button id="family-text-blast-button" type="button" style="margin-left: 10px;" onclick="showFamilyBlastModal('text')">📱 Family Text Blast</button>
-            <button id="family-email-blast-button" type="button" style="margin-left: 10px;" onclick="showFamilyBlastModal('email')">📧 Family Email Blast</button>
-          </div>
-          <div id="search-section-container">
-            <input id="family-search-input" placeholder="Search family...">
-            <div id="family-search-results"></div>
-          </div>
-          <div id="relationship-finder-container">
-            <input id="person1-relationship-input" placeholder="Person 1">
-            <div id="person1-relationship-suggestions"></div>
-            <div id="selected-person1-display"></div>
-            <input id="person1-relationship-id" type="hidden">
-            <input id="person2-relationship-input" placeholder="Person 2">
-            <div id="person2-relationship-suggestions"></div>
-            <div id="selected-person2-display"></div>
-            <input id="person2-relationship-id" type="hidden">
-            <button id="calculate-relationship-button">Calculate Relationship</button>
-            <div id="relationship-result"></div>
-          </div>
-          <div id="add-person-modal" style="display: none;">
-                            <form id="add-person-form-old">
-              <input id="add-parents-input" placeholder="Add parents...">
-              <div id="add-parents-suggestions"></div>
-              <div id="selected-parents-list"></div>
-              <input id="add-parents-ids" type="hidden">
-              <input id="add-children-input" placeholder="Add children...">
-              <div id="add-children-suggestions"></div>
-              <div id="selected-children-list"></div>
-              <input id="add-children-ids" type="hidden">
-              <input id="add-spouse-input" placeholder="Add spouse...">
-              <div id="add-spouse-suggestions"></div>
-              <div id="selected-spouse-display"></div>
-              <input id="add-spouse-id-hidden" type="hidden">
-              <select id="add-pronouns"><option value="">Pronouns</option></select>
-              <input id="add-pronouns-custom" style="display:none;">
-              <button type="submit">Add Person</button>
-            </form>
-          </div>
-          <div id="tree-container"></div>
-          <div id="details-container">
-            <div id="person-info">
-              <div style="text-align: center; padding: 40px 20px; color: #666;">
-                <h3>👤 No Person Selected</h3>
-                <p>Click on anyone in the family tree to see their details here.</p>
+        <main id="main-content" class="app-grid" style="display:none;">
+          <div class="left-column">
+            <div id="actions-toolbar" class="app-card toolbar-card">
+              <button id="add-person-button" type="button">Add Person</button>
+              <button id="import-csv-button" type="button">Import CSV</button>
+              <button id="generate-holiday-card-pdf-button" type="button">Holiday Card Labels (PDF)</button>
+              <button id="generate-individual-labels-pdf-button" type="button">Individual Mailing Labels</button>
+              <button id="generate-birthday-list-pdf-button" type="button">Birthday List (PDF)</button>
+              <button id="family-text-blast-button" type="button">📱 Family Text Blast</button>
+              <button id="family-email-blast-button" type="button">📧 Family Email Blast</button>
+            </div>
+            <div id="search-section-container" class="app-card">
+              <div class="card-heading">
+                <h2>Find Someone</h2>
+                <p class="section-subtitle">Search by name, nickname, or phone.</p>
               </div>
+              <input id="family-search-input" placeholder="Search family...">
+              <div id="family-search-results"></div>
+            </div>
+            <div class="app-card tree-card">
+              <div class="card-heading">
+                <h2>Family Tree</h2>
+                <p class="section-subtitle">Select a person to view their details.</p>
+              </div>
+              <div id="tree-container" class="tree-scroll-region"></div>
             </div>
           </div>
-          <div id="birthdays-section">
-            <h2>Upcoming Birthdays</h2>
-            <ul id="birthdays-list">
-              <li>No birthdays soon.</li>
-            </ul>
+          <div class="right-column">
+            <div id="random-fact-display" class="app-card fact-card">
+              <p class="empty-state-text">Family fun facts will appear once data loads.</p>
+            </div>
+            <div id="details-container" class="app-card person-card">
+              <div id="person-info" class="empty-state">
+                <h3>👤 No Person Selected</h3>
+                <p>Choose someone from the tree to explore their story.</p>
+              </div>
+            </div>
+            <div id="birthdays-section" class="app-card birthdays-card">
+              <div class="card-heading">
+                <h2>Upcoming Birthdays</h2>
+                <p class="section-subtitle">We’ll highlight celebrations in the next 30 days.</p>
+              </div>
+              <ul id="birthdays-list">
+                <li class="empty-state-text">No birthdays soon.</li>
+              </ul>
+            </div>
+            <div id="relationship-finder-container" class="app-card relationship-card">
+              <div class="card-heading">
+                <h2>Relationship Finder</h2>
+                <p class="section-subtitle">See how two relatives are connected.</p>
+              </div>
+              <input id="person1-relationship-input" placeholder="Person 1">
+              <div id="person1-relationship-suggestions"></div>
+              <div id="selected-person1-display"></div>
+              <input id="person1-relationship-id" type="hidden">
+              <input id="person2-relationship-input" placeholder="Person 2">
+              <div id="person2-relationship-suggestions"></div>
+              <div id="selected-person2-display"></div>
+              <input id="person2-relationship-id" type="hidden">
+              <button id="calculate-relationship-button">Calculate Relationship</button>
+              <div id="relationship-result"></div>
+            </div>
           </div>
         </main>
 

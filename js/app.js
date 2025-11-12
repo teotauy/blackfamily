@@ -218,6 +218,7 @@ async function uploadToBackend() {
     uploadBtn.disabled = true;
     
     try {
+        beginLoaderCountdown();
         const normalizeValue = (val) => (val || '').trim().toLowerCase();
         const toKey = (firstName, lastName, dob, phone) => {
             return `${normalizeValue(firstName)}|${normalizeValue(lastName)}|${normalizeValue(dob)}|${normalizeValue(phone)}`;
@@ -250,6 +251,7 @@ async function uploadToBackend() {
                     birthDate: row['DOB'] || row['Birth Date'] || '',
                     contact_email: row['Email'] || '',
                     contact_phone: row['Phone'] || '',
+                    pronouns: row['Pronouns'] || row['Preferred Pronouns'] || row['Preferred Pronoun'] || row['Preferred Pronoun(s)'] || '',
                     bio: `Imported from CSV: ${row['Notes'] || ''}`
                 }
             };
@@ -291,6 +293,8 @@ async function uploadToBackend() {
     } finally {
         uploadBtn.textContent = 'Upload to Database';
         uploadBtn.disabled = false;
+        completeLoaderRequest();
+        hideGlobalLoader();
     }
 }
 
@@ -358,6 +362,118 @@ let currentUser = null;
 let authToken = localStorage.getItem('authToken');
 let familyData = [];
 let appEventListenersInitialized = false;
+
+// --- UI Helpers ---
+function getDefaultPersonCardMarkup() {
+  return `
+    <div class="empty-state">
+      <h3>👤 No Person Selected</h3>
+      <p>Choose someone from the tree to explore their story.</p>
+    </div>
+  `;
+}
+
+// --- Loader State ---
+const loaderElements = {
+  container: null,
+  primaryText: null,
+  secondaryText: null,
+  retryButton: null
+};
+
+const loaderState = {
+  activeRequests: 0,
+  revealTimer: null,
+  lockVisible: false
+};
+
+function ensureLoaderElements() {
+  if (loaderElements.container) {
+    return;
+  }
+  loaderElements.container = document.getElementById('global-loader');
+  loaderElements.primaryText = document.getElementById('loader-primary-text');
+  loaderElements.secondaryText = document.getElementById('loader-secondary-text');
+  loaderElements.retryButton = document.getElementById('loader-retry-button');
+
+  if (loaderElements.retryButton) {
+    loaderElements.retryButton.addEventListener('click', () => {
+      loaderState.lockVisible = false;
+      loaderState.activeRequests = 0;
+      hideGlobalLoader();
+      window.location.reload();
+    });
+    loaderElements.retryButton.style.display = 'none';
+  }
+}
+
+function showGlobalLoader({ primary, secondary, showRetry = false, lock = false } = {}) {
+  ensureLoaderElements();
+  if (!loaderElements.container) {
+    return;
+  }
+  loaderElements.primaryText.textContent = primary || 'Waking the family tree…';
+  loaderElements.secondaryText.textContent = secondary || '';
+  loaderElements.retryButton.style.display = showRetry ? 'block' : 'none';
+  loaderState.lockVisible = lock;
+  loaderElements.container.classList.add('visible');
+  loaderElements.container.setAttribute('aria-hidden', 'false');
+}
+
+function hideGlobalLoader() {
+  ensureLoaderElements();
+  if (!loaderElements.container || loaderState.lockVisible) {
+    return;
+  }
+  loaderElements.container.classList.remove('visible');
+  loaderElements.container.setAttribute('aria-hidden', 'true');
+  if (loaderElements.retryButton) {
+    loaderElements.retryButton.style.display = 'none';
+  }
+}
+
+function beginLoaderCountdown() {
+  ensureLoaderElements();
+  loaderState.activeRequests += 1;
+  if (loaderState.revealTimer) {
+    return;
+  }
+  loaderState.revealTimer = setTimeout(() => {
+    loaderState.revealTimer = null;
+    if (loaderState.activeRequests > 0) {
+      const fact = calculateNextBirthdayFact({ fallback: 'Gathering family milestones…', short: true });
+      showGlobalLoader({
+        primary: 'Waking the family records…',
+        secondary: fact || 'Hang tight while we connect.',
+        showRetry: false,
+        lock: false
+      });
+    }
+  }, 1200);
+}
+
+function completeLoaderRequest() {
+  loaderState.activeRequests = Math.max(0, loaderState.activeRequests - 1);
+  if (loaderState.activeRequests === 0) {
+    if (loaderState.revealTimer) {
+      clearTimeout(loaderState.revealTimer);
+      loaderState.revealTimer = null;
+    }
+    if (!loaderState.lockVisible) {
+      setTimeout(() => hideGlobalLoader(), 150);
+    }
+  }
+}
+
+function showLoaderErrorMessage(message) {
+  const secondary = 'The server might be waking up. Try again in a few seconds or tap retry.';
+  showGlobalLoader({
+    primary: message || 'Having trouble reaching the server…',
+    secondary,
+    showRetry: true,
+    lock: true
+  });
+}
 
 // Restore user info from token if available
 async function restoreUserFromToken() {
@@ -443,6 +559,7 @@ function showRegisterForm() {
 
 async function login(phone, password) {
   try {
+    beginLoaderCountdown();
     const response = await fetch(`${API_BASE}/verify-access`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -469,11 +586,11 @@ async function login(phone, password) {
     }
     const mainContent = document.getElementById('main-content');
     if (mainContent) {
-      mainContent.style.display = 'block';
+      mainContent.style.display = 'grid';
     }
     const actionsToolbar = document.getElementById('actions-toolbar');
     if (actionsToolbar) {
-      actionsToolbar.style.display = 'flex';
+      actionsToolbar.style.display = 'grid';
     }
     const searchSection = document.getElementById('search-section-container');
     if (searchSection) {
@@ -488,8 +605,12 @@ async function login(phone, password) {
     renderFamilyTree();
     renderUpcomingBirthdays();
     setupAppEventListeners(); // Setup all app functionality after login
+    hideGlobalLoader();
   } catch (error) {
     document.getElementById('login-error').textContent = error.message;
+    hideGlobalLoader();
+  } finally {
+    completeLoaderRequest();
   }
 }
 
@@ -520,12 +641,23 @@ function logout() {
   currentUser = null;
   familyData = []; // Clear cached family data
   appEventListenersInitialized = false;
+  loaderState.lockVisible = false;
+  hideGlobalLoader();
   localStorage.removeItem('authToken');
   
   // Clear any displayed content
-  document.getElementById('person-info').innerHTML = '<p>Select a person from the tree to see their details.</p>';
-  document.getElementById('tree-container').innerHTML = '<h2>Family Tree Visualization</h2>';
-  document.getElementById('birthdays-list').innerHTML = '<li>No birthdays soon.</li>';
+  const personInfo = document.getElementById('person-info');
+  if (personInfo) {
+    personInfo.innerHTML = getDefaultPersonCardMarkup();
+  }
+  const treeContainer = document.getElementById('tree-container');
+  if (treeContainer) {
+    treeContainer.innerHTML = '<p class="empty-state-text">Add a family member to start shaping the tree.</p>';
+  }
+  const birthdaysList = document.getElementById('birthdays-list');
+  if (birthdaysList) {
+    birthdaysList.innerHTML = '<li class="empty-state-text">No birthdays soon.</li>';
+  }
   
   updateUIForAuth();
   showAuthModal();
@@ -541,9 +673,9 @@ function updateUIForAuth() {
   // Update header auth section
   if (headerAuthSection) {
     headerAuthSection.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="color: #666; font-size: 14px;">Welcome to the Black Family Tree! (${currentUser?.phone || 'Family Member'})</span>
-        <button id="logout-btn" style="padding: 8px 16px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Logout</button>
+      <div class="auth-banner">
+        <span class="auth-greeting">Welcome to the Black Family Tree (${currentUser?.phone || 'Family Member'})</span>
+        <button id="logout-btn" class="ghost danger small">Logout</button>
       </div>
     `;
     
@@ -568,8 +700,8 @@ function updateUIForAuth() {
   
   if (isLoggedIn) {
     console.log('User is logged in, showing main content...');
-    if (mainContent) mainContent.style.display = 'block';
-    if (actionsToolbar) actionsToolbar.style.display = 'block';
+    if (mainContent) mainContent.style.display = 'grid';
+    if (actionsToolbar) actionsToolbar.style.display = 'grid';
     if (searchSection) searchSection.style.display = 'block';
     if (relationshipFinder) relationshipFinder.style.display = 'block';
     
@@ -600,6 +732,10 @@ function updateUIForAuth() {
         <button onclick="showAuthModal()" style="padding: 15px 30px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold;">🔐 Login to Get Started</button>
       `;
       document.body.appendChild(loginMessage);
+    }
+    const personInfo = document.getElementById('person-info');
+    if (personInfo) {
+      personInfo.innerHTML = getDefaultPersonCardMarkup();
     }
   }
   
@@ -642,22 +778,41 @@ async function apiCall(endpoint, options = {}) {
   };
   
   try {
+    beginLoaderCountdown();
     const response = await fetch(url, config);
     if (response.status === 401) {
       console.log('Authentication failed, logging out...');
       logout();
+      completeLoaderRequest();
       return null;
     }
     if (!response.ok) {
-      throw new Error(`API call failed: ${response.status} ${response.statusText}`);
+      let message = `API call failed: ${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody && errorBody.error) {
+          message = errorBody.error;
+        }
+      } catch {
+        const text = await response.text();
+        if (text) {
+          message = text;
+        }
+      }
+      throw new Error(message);
     }
+    completeLoaderRequest();
+    hideGlobalLoader();
     return response;
   } catch (error) {
     console.error(`API call to ${endpoint} failed:`, error);
-    // If it's a network error and we have a token, it might be invalid
-    if (authToken && error.message.includes('fetch')) {
+    if (error.message && error.message.includes('Failed to fetch')) {
+      showLoaderErrorMessage('Still reaching for the family server…');
+    }
+    if (authToken && error.message && error.message.includes('fetch')) {
       logout();
     }
+    completeLoaderRequest();
     throw error;
   }
 }
@@ -688,14 +843,31 @@ async function loadFamilyDataFromAPI() {
             const person = personMap.get(rel.person_id);
             if (!person) return;
             if (rel.type === 'parent') {
-                person.parents.push(rel.related_id);
+                if (!person.parents.includes(rel.related_id)) {
+                    person.parents.push(rel.related_id);
+                }
             } else if (rel.type === 'child') {
-                person.children.push(rel.related_id);
+                if (!person.children.includes(rel.related_id)) {
+                    person.children.push(rel.related_id);
+                }
             } else if (rel.type === 'spouse') {
-                person.marriages.push({ spouseId: rel.related_id });
+                const alreadyLinked = person.marriages.some(marriage => marriage.spouseId === rel.related_id);
+                if (!alreadyLinked) {
+                    person.marriages.push({ spouseId: rel.related_id });
+                }
             }
         });
-        familyData = Array.from(personMap.values());
+        familyData = Array.from(personMap.values()).map(person => ({
+            ...person,
+            parents: Array.from(new Set(person.parents)),
+            children: Array.from(new Set(person.children)),
+            marriages: person.marriages.reduce((unique, marriage) => {
+                if (!unique.some(existing => existing.spouseId === marriage.spouseId)) {
+                    unique.push(marriage);
+                }
+                return unique;
+            }, [])
+        }));
     } catch (error) {
         console.error('Error loading family data:', error);
     }
@@ -704,6 +876,8 @@ async function loadFamilyDataFromAPI() {
 // --- Replace initial data load ---
 document.addEventListener('DOMContentLoaded', async () => {
     // Restore user from token first
+    ensureLoaderElements();
+    hideGlobalLoader();
     await restoreUserFromToken();
     
     // Always update UI first to show correct initial state
@@ -785,7 +959,7 @@ async function deletePerson(personId) {
             // Clear person info panel and remove selection styling
             const detailsContainer = document.getElementById('details-container');
             detailsContainer.classList.remove('person-selected');
-            document.getElementById('person-info').innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #666;"><h3>👤 No Person Selected</h3><p>Click on anyone in the family tree to see their details here.</p></div>';
+            document.getElementById('person-info').innerHTML = getDefaultPersonCardMarkup();
         } catch (error) {
             console.error('Error deleting person:', error);
             alert('Failed to delete person. Please try again.');
@@ -796,18 +970,115 @@ async function deletePerson(personId) {
 // --- Existing code ...
 
 // Function to calculate the "Next Birthday" fact
-function calculateNextBirthdayFact() {
-    // ... existing code ...
+function calculateNextBirthdayFact(options = {}) {
+    const fallback = options.fallback || '';
+    if (!familyData || familyData.length === 0) {
+        return fallback;
+    }
+
+    const today = new Date();
+    let soonest = null;
+
+    familyData.forEach(person => {
+        if (!person.birthDate) {
+            return;
+        }
+        const birthDate = new Date(person.birthDate);
+        if (isNaN(birthDate.getTime())) {
+            return;
+        }
+        const target = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate());
+        if (target < today) {
+            target.setFullYear(today.getFullYear() + 1);
+        }
+        if (!soonest || target < soonest.target) {
+            soonest = { person, target, birthDate };
+        }
+    });
+
+    if (!soonest) {
+        return fallback;
+    }
+
+    const formattedDate = soonest.target.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    let ageText = '';
+    if (!isNaN(soonest.birthDate.getTime())) {
+        const upcomingAge = soonest.target.getFullYear() - soonest.birthDate.getFullYear();
+        if (Number.isFinite(upcomingAge)) {
+            ageText = upcomingAge;
+        }
+    }
+
+    if (options.short) {
+        return `${soonest.person.name} • ${formattedDate}${ageText ? ` (${ageText})` : ''}`;
+    }
+
+    return ageText
+        ? `Next up: ${soonest.person.name} turns ${ageText} on ${formattedDate}.`
+        : `Next up: Celebrate ${soonest.person.name} on ${formattedDate}.`;
+}
+
+function getZodiacSign(month, day) {
+    const md = (month + 1) * 100 + day;
+    if (md >= 321 && md <= 419) return 'Aries';
+    if (md >= 420 && md <= 520) return 'Taurus';
+    if (md >= 521 && md <= 620) return 'Gemini';
+    if (md >= 621 && md <= 722) return 'Cancer';
+    if (md >= 723 && md <= 822) return 'Leo';
+    if (md >= 823 && md <= 922) return 'Virgo';
+    if (md >= 923 && md <= 1022) return 'Libra';
+    if (md >= 1023 && md <= 1121) return 'Scorpio';
+    if (md >= 1122 && md <= 1221) return 'Sagittarius';
+    if (md >= 1222 || md <= 119) return 'Capricorn';
+    if (md >= 120 && md <= 218) return 'Aquarius';
+    return 'Pisces';
+}
+
+function collectZodiacCounts() {
+    const counts = {};
+    if (!familyData || familyData.length === 0) {
+        return counts;
+    }
+    familyData.forEach(person => {
+        if (!person.birthDate) return;
+        const birthDate = new Date(person.birthDate);
+        if (isNaN(birthDate.getTime())) return;
+        const sign = getZodiacSign(birthDate.getMonth(), birthDate.getDate());
+        counts[sign] = (counts[sign] || 0) + 1;
+    });
+    return counts;
 }
 
 // Function to calculate the "Least Common Zodiac Sign" fact
 function calculateLeastCommonZodiacSignFact() {
-    // ... existing code ...
+    const counts = collectZodiacCounts();
+    const entries = Object.entries(counts);
+    if (entries.length === 0) {
+        return '';
+    }
+    entries.sort((a, b) => a[1] - b[1]);
+    const [sign, total] = entries[0];
+    return `Rarest sign in the family: ${sign} (${total} member${total === 1 ? '' : 's'}).`;
 }
 
 // Function to calculate the "Most Common Zodiac Sign" fact
 function calculateMostCommonZodiacSignFact() {
-    // ... existing code ...
+    const counts = collectZodiacCounts();
+    const entries = Object.entries(counts);
+    if (entries.length === 0) {
+        return '';
+    }
+    entries.sort((a, b) => b[1] - a[1]);
+    const [sign, total] = entries[0];
+    return `Most common sign: ${sign} (${total} member${total === 1 ? '' : 's'}).`;
+}
+
+function calculateFamilySizeFact() {
+    if (!familyData || familyData.length === 0) {
+        return '';
+    }
+    const total = familyData.length;
+    return `We’re tracking ${total} family member${total === 1 ? '' : 's'} so far.`;
 }
 
 // Array of functions that calculate facts. Add more fact functions here later.
@@ -815,7 +1086,7 @@ const familyFactCalculators = [
     calculateNextBirthdayFact,
     calculateLeastCommonZodiacSignFact,
     calculateMostCommonZodiacSignFact,
-    // Add other fact functions here as you create them
+    calculateFamilySizeFact
 ];
 
 // Function to display a random fact
@@ -827,21 +1098,21 @@ function displayRandomFact() {
     }
 
     if (!familyData || familyData.length === 0) {
-         factDisplayElement.innerHTML = '<p>No family data available for facts.</p>';
-         return;
-     }
-
-    if (familyFactCalculators.length === 0) {
-        factDisplayElement.innerHTML = '<p>No facts configured yet.</p>';
+        factDisplayElement.innerHTML = '<p class="empty-state-text">We’ll show fun facts once the family data loads.</p>';
         return;
     }
 
-    // Randomly select a fact function
-    const randomIndex = Math.floor(Math.random() * familyFactCalculators.length);
-    const selectedFactFunction = familyFactCalculators[randomIndex];
+    const facts = familyFactCalculators
+        .map(fn => fn({ fallback: '' }))
+        .filter(Boolean);
 
-    const factText = selectedFactFunction();
-    factDisplayElement.innerHTML = `<p>${factText}</p>`;
+    if (facts.length === 0) {
+        factDisplayElement.innerHTML = '<p class="empty-state-text">We’re still curating family highlights.</p>';
+        return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * facts.length);
+    factDisplayElement.innerHTML = `<p>${facts[randomIndex]}</p>`;
 }
 
 function setupAuthEventListeners() {
@@ -1024,14 +1295,14 @@ function renderFamilyTree() {
     }
     
     console.log('Found tree-container, rendering tree...');
-    treeContainer.innerHTML = '<h2>Family Tree Visualization</h2>';
+    treeContainer.innerHTML = '';
     const treeRootElement = document.createElement('div');
     treeRootElement.classList.add('tree');
     treeContainer.appendChild(treeRootElement);
 
     if (!familyData || familyData.length === 0) {
         console.log('No family data to render');
-        treeRootElement.innerHTML = '<p>No data to render the tree.</p>';
+        treeRootElement.innerHTML = '<p class="empty-state-text">Add the first family member to see the tree bloom.</p>';
         return;
     }
     
@@ -1039,16 +1310,34 @@ function renderFamilyTree() {
 
     // Find root nodes (individuals without parents listed in the data)
     const personMap = new Map(familyData.map(p => [p.id, p]));
-    let allChildrenIds = new Set();
-    familyData.forEach(p => {
-        if(p.children) {
-            p.children.forEach(childId => allChildrenIds.add(childId));
+    const allChildrenIds = new Set();
+    const anchoredIds = new Set(); // People who are anchored via parents or as children
+
+    familyData.forEach(person => {
+        if (person.parents && person.parents.length > 0) {
+            anchoredIds.add(person.id);
+        }
+        if (person.children && person.children.length > 0) {
+            person.children.forEach(childId => {
+                allChildrenIds.add(childId);
+                anchoredIds.add(childId);
+            });
+        }
+    });
+
+    const marriedIntoAnchoredIds = new Set();
+    familyData.forEach(person => {
+        if (anchoredIds.has(person.id) && person.marriages && person.marriages.length > 0) {
+            person.marriages.forEach(marriage => {
+                marriedIntoAnchoredIds.add(marriage.spouseId);
+            });
         }
     });
 
     const rootNodes = familyData.filter(person => 
         (!person.parents || person.parents.length === 0) && 
-        !allChildrenIds.has(person.id)
+        !allChildrenIds.has(person.id) &&
+        !marriedIntoAnchoredIds.has(person.id)
     );
 
     // --- Avoid duplicate spouse nodes ---
@@ -1114,15 +1403,32 @@ function createPersonNodeDOM(person, personMap, level) {
 
     // 3. Name (nickname if present)
     const nameSpan = document.createElement('span');
+    nameSpan.classList.add('node-name');
     let displayName = person.nickname || person.name;
-    if (person.deathDate) displayName += ' ⚰️';
+    if (person.deathDate) {
+        displayName += ' ⚰️';
+        nameSpan.classList.add('node-deceased');
+    }
     const ageDisplayInTree = calculateAgeDisplay(person);
-    nameSpan.textContent = `${displayName}${ageDisplayInTree}`;
+    nameSpan.textContent = displayName;
     nameSpan.addEventListener('click', (e) => {
         e.stopPropagation();
         displayPersonDetails(person.id);
     });
     nodeContentWrapper.appendChild(nameSpan);
+    if (ageDisplayInTree) {
+        const ageLabel = ageDisplayInTree
+            .replace(/[()]/g, '')
+            .replace('Age at death:', 'Age at death')
+            .replace('Age:', 'Age')
+            .trim();
+        if (ageLabel) {
+            const ageSpan = document.createElement('span');
+            ageSpan.classList.add('node-meta');
+            ageSpan.textContent = ageLabel;
+            nodeContentWrapper.appendChild(ageSpan);
+        }
+    }
     // Pronouns in tree (optional, small)
     if (person.pronouns) {
         const pronounsSpan = document.createElement('span');
@@ -1164,7 +1470,12 @@ function createPersonNodeDOM(person, personMap, level) {
             .filter(child => child)
             .sort((a, b) => new Date(a.birthDate) - new Date(b.birthDate));
 
+        const renderedChildIds = new Set();
         childrenObjects.forEach(child => {
+            if (renderedChildIds.has(child.id)) {
+                return;
+            }
+            renderedChildIds.add(child.id);
             const childNode = createPersonNodeDOM(child, personMap, level + 1);
             childrenContainer.appendChild(childNode);
         });
@@ -1225,87 +1536,182 @@ function displayPersonDetails(personId) {
     const personInfoDiv = document.getElementById('person-info');
 
     if (person) {
-        let detailsHTML = "";
-        // Add a prominent "SELECTED" indicator
-        detailsHTML += `<div style="background: linear-gradient(45deg, #007bff, #0056b3); color: white; padding: 8px 12px; border-radius: 6px; text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 14px;">👤 PERSON SELECTED</div>`;
-        // Profile Picture (with default)
-        detailsHTML += `<img src="${person.profilePic || defaultProfilePic}" alt="Profile picture of ${person.nickname || person.name}" class="profile-pic-details">`;
-        // Main heading: nickname (or name), deceased label
-        let mainHeading = person.nickname || person.name;
-        if (person.deathDate) mainHeading += ' ⚰️';
-        detailsHTML += `<h3 style="color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 8px;">${mainHeading}</h3>`;
-        // Pronouns
-        if (person.pronouns) detailsHTML += `<div><strong>Pronouns:</strong> ${person.pronouns}</div>`;
-        // Middle name
-        if (person.middleName) detailsHTML += `<div><strong>Middle Name:</strong> ${person.middleName}</div>`;
-        // Birth/death
-        detailsHTML += `<p><strong>Born:</strong> ${formatDateLong(person.birthDate)}`;
-        if (person.placeOfBirth) detailsHTML += ` in ${person.placeOfBirth}`;
-        detailsHTML += `</p>`;
+        const relativeMap = new Map(familyData.map(p => [p.id, p]));
+        const legalName = person.name || 'Unnamed Family Member';
+        const preferredName = person.nickname || legalName;
+        const heroSubtitle = preferredName !== legalName ? `<p class="hero-subtitle">${legalName}</p>` : '';
+
+        const badges = [];
+        if (person.pronouns) {
+            badges.push(`<span class="badge">${person.pronouns}</span>`);
+        }
+        const smsStatus = (person.can_receive_sms || '').toLowerCase();
+        if (smsStatus === 'yes') {
+            badges.push('<span class="badge success">SMS ready</span>');
+        } else if (smsStatus === 'no') {
+            badges.push('<span class="badge neutral">No SMS</span>');
+        }
         if (person.deathDate) {
-            detailsHTML += `<p><strong>Died:</strong> ${formatDateLong(person.deathDate)}`;
-            if (person.placeOfDeath) detailsHTML += ` in ${person.placeOfDeath}`;
-            detailsHTML += `</p>`;
+            badges.push('<span class="badge neutral">Deceased</span>');
         }
-        // Bio/notes
-        detailsHTML += `<p><strong>Bio:</strong> ${person.bio || 'No biography available.'}</p>`;
-        if (person.notes) detailsHTML += `<p><strong>Notes:</strong> ${person.notes}</p>`;
-        // Marriages Section (with wedding/divorce info)
-        if (person.marriages && person.marriages.length > 0) {
-            detailsHTML += "<h4>Marriages:</h4><ul>";
-            person.marriages.forEach(marriage => {
-                const spouse = familyData.find(p => p.id === marriage.spouseId);
-                const spouseName = spouse ? (spouse.nickname || spouse.name) : `Spouse (ID: ${marriage.spouseId})`;
-                detailsHTML += `<li>With: ${spouseName}`;
-                if (marriage.weddingDate) {
-                    detailsHTML += ` <br/>&nbsp;&nbsp;&nbsp;&nbsp;Married: ${marriage.weddingDate}`;
-                }
-                if (marriage.divorceDate) {
-                    detailsHTML += ` <br/>&nbsp;&nbsp;&nbsp;&nbsp;Divorced: ${marriage.divorceDate}`;
-                }
-                detailsHTML += "</li>";
-            });
-            detailsHTML += "</ul>";
-        } else {
-            detailsHTML += "<p>No marriage information available.</p>";
-        }
-        // ... existing contact info, etc ...
-        detailsHTML += "<h4>Contact Information:</h4>";
-        if (person.contact && Object.keys(person.contact).length > 0) {
-            let addressParts = [];
-            if (person.contact.street) addressParts.push(person.contact.street);
-            if (person.contact.city) addressParts.push(person.contact.city);
-            if (person.contact.state) addressParts.push(person.contact.state);
-            if (person.contact.zip) addressParts.push(person.contact.zip);
+        const badgesHtml = badges.length ? `<div class="person-badges">${badges.join('')}</div>` : '';
 
-            if (addressParts.length > 0) {
-                detailsHTML += `<p><strong>Address:</strong> ${addressParts.join(', ')}</p>`;
-            }
-            if (person.contact.email) {
-                detailsHTML += `<p><strong>Email:</strong> <a href="mailto:${person.contact.email}">${person.contact.email}</a></p>`;
-            }
-            if (person.contact.phone) {
-                const rawPhone = person.contact.phone.replace(/[^\d+]/g, '');
-                // Display the original phone number, then links for call and text
-                detailsHTML += `<p><strong>Phone:</strong> ${person.contact.phone} 
-                    (<a href="tel:${rawPhone}">Call</a> / 
-                    <a href="sms:${rawPhone}">Text</a>)
-                </p>`;
-            }
-        } else {
-            detailsHTML += "<p>No contact information available.</p>";
-        }
+        const birthValue = formatDateLong(person.birthDate);
+        const deathValue = person.deathDate ? formatDateLong(person.deathDate) : null;
+        const ageSummary = getAgeSummary(person);
 
-        if (person.notes) {
-            detailsHTML += `<p><strong>Notes:</strong> ${person.notes}</p>`;
+        const heroMetaParts = [];
+        if (birthValue && birthValue !== 'N/A') {
+            heroMetaParts.push(birthValue);
         }
-        
-        // Placeholder for other relationships like parents, children - we'll expand this later
-        // if (person.parents) { ... }
-        // if (person.children) { ... }
+        if (person.placeOfBirth) {
+            heroMetaParts.push(person.placeOfBirth);
+        }
+        const heroMetaLine = heroMetaParts.length ? `<div class="hero-meta-line">${heroMetaParts.map(text => `<span>${text}</span>`).join('')}</div>` : '';
 
-        detailsHTML += `<button id="edit-relationships-btn" style="margin-top:10px;">Edit Relationships</button>`;
-        detailsHTML += `<button id="delete-person-btn" style="margin-top:10px; margin-left:10px; background-color:#e74c3c; color:white;">Delete Person</button>`;
+        const metaCards = [
+            `<div class="meta-card">
+                <span class="meta-label">Born</span>
+                <span class="meta-value">${birthValue}</span>
+                ${person.placeOfBirth ? `<span class="meta-hint">${person.placeOfBirth}</span>` : ''}
+            </div>`
+        ];
+        if (ageSummary) {
+            metaCards.push(`
+            <div class="meta-card">
+                <span class="meta-label">${ageSummary.label}</span>
+                <span class="meta-value">${ageSummary.value}</span>
+            </div>`);
+        }
+        if (deathValue) {
+            metaCards.push(`
+            <div class="meta-card">
+                <span class="meta-label">Died</span>
+                <span class="meta-value">${deathValue}</span>
+                ${person.placeOfDeath ? `<span class="meta-hint">${person.placeOfDeath}</span>` : ''}
+            </div>`);
+        }
+        const metaGridHtml = `<div class="person-meta-grid">${metaCards.join('')}</div>`;
+
+        const renderRelationChips = (names, emptyText) => {
+            if (!names.length) {
+                return `<span class="empty-pill">${emptyText}</span>`;
+            }
+            return names.map(label => `<span class="relation-chip">${label}</span>`).join('');
+        };
+
+        const parentNames = Array.from(person.parents || [])
+            .map(id => relativeMap.get(id))
+            .filter(Boolean)
+            .map(relative => relative.nickname || relative.name);
+        const childrenNames = Array.from(person.children || [])
+            .map(id => relativeMap.get(id))
+            .filter(Boolean)
+            .map(relative => relative.nickname || relative.name);
+        const spouseChipsList = (person.marriages || [])
+            .map(marriage => {
+                const spouse = relativeMap.get(marriage.spouseId);
+                if (!spouse) return null;
+                const labels = [spouse.nickname || spouse.name];
+                if (marriage.weddingDate) labels.push(`m. ${marriage.weddingDate}`);
+                if (marriage.divorceDate) labels.push(`d. ${marriage.divorceDate}`);
+                return `<span class="relation-chip">${labels.join(' • ')}</span>`;
+            })
+            .filter(Boolean);
+
+        const parentsHtml = renderRelationChips(parentNames, 'Add parents');
+        const childrenHtml = renderRelationChips(childrenNames, 'Add children');
+        const spouseHtml = spouseChipsList.length ? spouseChipsList.join('') : `<span class="empty-pill">Add spouse</span>`;
+
+        const contactRows = [];
+        const contact = person.contact || {};
+        const addressParts = [contact.street, contact.city, contact.state, contact.zip].filter(Boolean);
+        if (addressParts.length) {
+            contactRows.push(`
+                <div class="info-row">
+                    <span class="info-label">Address</span>
+                    <span class="info-value">${addressParts.join(', ')}</span>
+                </div>
+            `);
+        }
+        if (contact.email) {
+            contactRows.push(`
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span class="info-value"><a href="mailto:${contact.email}">${contact.email}</a></span>
+                </div>
+            `);
+        }
+        if (contact.phone) {
+            const rawPhone = contact.phone.replace(/[^\d+]/g, '');
+            contactRows.push(`
+                <div class="info-row">
+                    <span class="info-label">Phone</span>
+                    <span class="info-value">
+                        ${contact.phone}
+                        <span class="contact-actions">
+                            <a href="tel:${rawPhone}">Call</a> · <a href="sms:${rawPhone}">Text</a>
+                        </span>
+                    </span>
+                </div>
+            `);
+        }
+        if (smsStatus && smsStatus !== 'unsure') {
+            const smsCopy = smsStatus === 'yes' ? 'OK to text' : 'Do not send texts';
+            contactRows.push(`
+                <div class="info-row">
+                    <span class="info-label">SMS Preference</span>
+                    <span class="info-value">${smsCopy}</span>
+                </div>
+            `);
+        }
+        const contactHtml = contactRows.length ? contactRows.join('') : `<div class="info-row"><span class="info-value muted">No contact information yet.</span></div>`;
+
+        const storyHtml = `<p>${person.bio || 'Add a biography to capture their story.'}</p>`;
+        const notesHtml = person.notes ? `<div class="section-note">${person.notes}</div>` : '';
+
+        const detailsHTML = `
+          <div class="person-hero">
+            <div class="hero-avatar">
+              <img src="${person.profilePic || defaultProfilePic}" alt="Profile picture of ${preferredName}" class="person-avatar">
+            </div>
+            <div class="hero-info">
+              <h2>${preferredName}</h2>
+              ${heroSubtitle}
+              ${badgesHtml}
+              ${heroMetaLine}
+            </div>
+            <div class="hero-actions">
+              <button type="button" id="edit-relationships-btn" class="primary">Edit Profile</button>
+              <button type="button" id="delete-person-btn" class="ghost danger">Delete</button>
+            </div>
+          </div>
+          ${metaGridHtml}
+          <section class="person-section">
+            <h4 class="section-heading">Story</h4>
+            ${storyHtml}
+            ${notesHtml}
+          </section>
+          <section class="person-section">
+            <h4 class="section-heading">Family</h4>
+            <div class="relation-block">
+              <span class="info-label">Parents</span>
+              <div class="chip-group">${parentsHtml}</div>
+            </div>
+            <div class="relation-block">
+              <span class="info-label">Children</span>
+              <div class="chip-group">${childrenHtml}</div>
+            </div>
+            <div class="relation-block">
+              <span class="info-label">Spouse</span>
+              <div class="chip-group">${spouseHtml}</div>
+            </div>
+          </section>
+          <section class="person-section">
+            <h4 class="section-heading">Contact</h4>
+            ${contactHtml}
+          </section>
+        `;
 
         personInfoDiv.innerHTML = detailsHTML;
 
@@ -1330,14 +1736,14 @@ function displayPersonDetails(personId) {
         };
     } else {
         detailsContainer.classList.remove('person-selected');
-        personInfoDiv.innerHTML = '<p>Person not found.</p>';
+        personInfoDiv.innerHTML = getDefaultPersonCardMarkup();
     }
 }
 
 function renderUpcomingBirthdays() {
     const birthdaysList = document.getElementById('birthdays-list');
     if (!familyData || familyData.length === 0) {
-        birthdaysList.innerHTML = '<li>No family data for birthdays.</li>';
+        birthdaysList.innerHTML = '<li class="empty-state-text">No family data for birthdays yet.</li>';
         return;
     }
 
@@ -1354,7 +1760,7 @@ function renderUpcomingBirthdays() {
             birthdaysList.appendChild(listItem);
         });
     } else {
-        birthdaysList.innerHTML = '<li>No upcoming birthdays in the next 30 days.</li>';
+        birthdaysList.innerHTML = '<li class="empty-state-text">No upcoming birthdays in the next 30 days.</li>';
     }
 }
 
@@ -1596,30 +2002,38 @@ async function handleAddPersonFormSubmit(event) {
 
 // --- Edit Relationships Modal Save ---
 async function updatePersonRelationships(personId, newParentIds, newChildIds, newSpouseId) {
-    // Remove all existing relationships for this person
-    const relsRes = await fetch(`${API_BASE}/relationships`);
-    const allRels = await relsRes.json();
-    const toDelete = allRels.filter(rel => rel.person_id === personId && ['parent','child','spouse'].includes(rel.type));
-    for (const rel of toDelete) {
-        await deleteRelationshipAPI(rel.id);
+    try {
+        const relsRes = await fetch(`${API_BASE}/relationships`);
+        const allRels = await relsRes.json();
+        const toDelete = allRels.filter(rel =>
+            ['parent', 'child', 'spouse'].includes(rel.type) &&
+            (rel.person_id === personId || rel.related_id === personId)
+        );
+        for (const rel of toDelete) {
+            await deleteRelationshipAPI(rel.id);
+        }
+
+        for (const pid of newParentIds) {
+            await addRelationshipAPI(personId, pid, 'parent');
+            await addRelationshipAPI(pid, personId, 'child');
+        }
+        for (const cid of newChildIds) {
+            await addRelationshipAPI(personId, cid, 'child');
+            await addRelationshipAPI(cid, personId, 'parent');
+        }
+        if (newSpouseId) {
+            await addRelationshipAPI(personId, newSpouseId, 'spouse');
+            await addRelationshipAPI(newSpouseId, personId, 'spouse');
+        }
+
+        await loadFamilyDataFromAPI();
+        renderFamilyTree();
+        renderUpcomingBirthdays();
+    } catch (error) {
+        console.error('Failed to update relationships:', error);
+        alert(error.message || 'Failed to update relationships. Please try again.');
+        throw error;
     }
-    // Add new relationships
-    for (const pid of newParentIds) {
-        await addRelationshipAPI(personId, pid, 'parent');
-        await addRelationshipAPI(pid, personId, 'child');
-    }
-    for (const cid of newChildIds) {
-        await addRelationshipAPI(personId, cid, 'child');
-        await addRelationshipAPI(cid, personId, 'parent');
-    }
-    if (newSpouseId) {
-        await addRelationshipAPI(personId, newSpouseId, 'spouse');
-        await addRelationshipAPI(newSpouseId, personId, 'spouse');
-    }
-    // Reload data and UI
-    await loadFamilyDataFromAPI();
-    renderFamilyTree();
-    renderUpcomingBirthdays();
 }
 
 function calculateAgeDisplay(person) {
@@ -2743,6 +3157,37 @@ function formatDateLong(dateString) {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function getAgeSummary(person) {
+    if (!person || !person.birthDate) {
+        return null;
+    }
+    const birthDate = new Date(person.birthDate);
+    if (isNaN(birthDate.getTime())) {
+        return null;
+    }
+
+    const referenceDate = person.deathDate ? new Date(person.deathDate) : new Date();
+    if (isNaN(referenceDate.getTime())) {
+        return null;
+    }
+
+    let age = referenceDate.getFullYear() - birthDate.getFullYear();
+    const monthDiff = referenceDate.getMonth() - birthDate.getMonth();
+    const dayDiff = referenceDate.getDate() - birthDate.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        age--;
+    }
+
+    if (age < 0) {
+        return null;
+    }
+
+    return {
+        label: person.deathDate ? 'Age at death' : 'Age',
+        value: `${age}`
+    };
+}
+
 // Modal for editing relationships
 const enhancedShowEditRelationshipsModal = function(personId) {
     const person = familyData.find(p => p.id === personId);
@@ -2763,7 +3208,7 @@ const enhancedShowEditRelationshipsModal = function(personId) {
         <button type="button" class="modal-close-btn" id="close-modal-x" title="Close">&times;</button>
         <h3>Edit Relationships for ${person.nickname || person.name}</h3>
         <div class="modal-section">
-          <strong>Name:</strong> ${person.name}<br/>
+          <label>Full Name:<br/><input type="text" id="edit-fullName" value="${person.name || ''}" placeholder="Full legal name"></label><br/>
           <label>Nickname:<br/><input type="text" id="edit-nickname" value="${person.nickname || ''}" placeholder="Preferred name (used in tree)"></label><br/>
           <label>Middle Name:<br/><input type="text" id="edit-middleName" value="${person.middle_name || person.middleName || ''}"></label><br/>
           <label>Pronouns:<br/>
@@ -3006,6 +3451,11 @@ const enhancedShowEditRelationshipsModal = function(personId) {
 
     overlay.querySelector('#save-relationships-btn').addEventListener('click', async () => {
         try {
+            const fullNameValue = overlay.querySelector('#edit-fullName').value.trim();
+            if (!fullNameValue) {
+                alert('Please enter the full name before saving.');
+                return;
+            }
             const nickname = overlay.querySelector('#edit-nickname').value.trim();
             const middleNameValue = overlay.querySelector('#edit-middleName').value.trim();
             const pronounValue = pronounsSelect ? pronounsSelect.value : '';
@@ -3019,6 +3469,7 @@ const enhancedShowEditRelationshipsModal = function(personId) {
 
             const updatedPayload = {
                 ...person,
+                name: fullNameValue,
                 nickname,
                 middle_name: middleNameValue,
                 middleName: middleNameValue,
@@ -3040,11 +3491,13 @@ const enhancedShowEditRelationshipsModal = function(personId) {
             );
 
             await loadFamilyDataFromAPI();
+            renderFamilyTree();
+            renderUpcomingBirthdays();
             displayPersonDetails(personId);
             closeModal();
         } catch (error) {
             console.error('Failed to save relationships:', error);
-            alert('Failed to save changes. Please try again.');
+            alert(error.message || 'Failed to save changes. Please try again.');
         }
     });
 };
