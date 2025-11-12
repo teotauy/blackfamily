@@ -19,11 +19,8 @@ function parseFamilyDate(value) {
     }
   }
 
-  const direct = new Date(trimmed);
-  if (!isNaN(direct.getTime())) {
-    return direct;
-  }
-
+  // Try parsing MM/DD/YY or MM/DD/YYYY format first (before direct Date parsing)
+  // This ensures two-digit years are handled correctly for family tree data
   const parts = trimmed.split(/[\/\-]/);
   if (parts.length === 3) {
     let [month, day, year] = parts.map(part => part.trim());
@@ -31,10 +28,17 @@ function parseFamilyDate(value) {
     const dayNum = parseInt(day, 10);
     let yearNum = parseInt(year, 10);
 
-    if (!isNaN(monthNum) && !isNaN(dayNum)) {
+    if (!isNaN(monthNum) && !isNaN(dayNum) && monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
       if (!isNaN(yearNum)) {
         if (year.length === 2) {
-          yearNum += yearNum >= 50 ? 1900 : 2000;
+          // For family tree data, assume two-digit years are from 1900s
+          // Only treat very recent years (00-20) as 2000s
+          // This handles cases like "35" → 1935, not 2035
+          if (yearNum <= 20) {
+            yearNum += 2000; // 00-20 → 2000-2020
+          } else {
+            yearNum += 1900; // 21-99 → 1921-1999
+          }
         }
         const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
         if (!isNaN(reconstructed.getTime())) {
@@ -42,6 +46,12 @@ function parseFamilyDate(value) {
         }
       }
     }
+  }
+
+  // Fall back to direct Date parsing for other formats
+  const direct = new Date(trimmed);
+  if (!isNaN(direct.getTime())) {
+    return direct;
   }
 
   return null;
