@@ -10,13 +10,18 @@
 ## 📆 Latest Update Snapshot (2025-11-10)
 
 ### ✅ Work Completed This Pass
+- **Date format standardization:** All dates now require 4-digit years (YYYY) - eliminates ambiguity and ensures accurate relationship validation. Dates stored as `YYYY-MM-DD` format.
 - **Backend login hardening:** `/api/verify-access` now normalizes phone numbers, so logins work whether the database stores punctuation (e.g., `512-426-6530`) or plain digits.
-- **Relationship modal improvements:** Editing a person’s full name, pronouns, and relationships now persists and re-renders instantly (tree + detail panel refresh).
-- **CSV import polish:** Preferred pronoun columns are imported into person records; deduplication still respects name/DOB/phone keys.
+- **Relationship modal improvements:** Editing a person's full name, pronouns, and relationships now persists and re-renders instantly (tree + detail panel refresh).
+- **CSV import polish:** Preferred pronoun columns are imported into person records; deduplication still respects name/DOB/phone keys. CSV imports now require 4-digit years.
+- **Date validation:** Changed from blocking to warning dialog - users can proceed or cancel when dates look suspicious (e.g., parent appears younger than child).
 - **UI/UX refresh:** 
   - Two-column dashboard layout with card-based sections and modern styling inspired by OneClock.
   - Global loader with friendly messaging/fun facts for Render cold starts and retry support.
   - Tree view, person detail pages, search, and empty states redesigned for consistency.
+  - Clickable profile pictures (popup if photo exists, uploader if not)
+  - Clickable parent/child names navigate to their profiles
+  - Search moved to top left of layout
 - **Data integrity:** Frontend deduplicates parent/child/spouse arrays returned from the API before rendering; backend enforces unique relationships and validates parent/child birth dates.
 - **Documentation:** `README.md` now includes clear instructions for granting GitHub credentials (PAT or SSH) so pushes can happen in future sessions.
 
@@ -129,6 +134,13 @@ An interactive family tree application for managing family relationships, contac
 
 **CSV Template Fields:**
 - First Name, Last Name, DOB, Email, Phone, Notes
+
+**⚠️ Important: Date Format Requirements**
+- **All dates must use 4-digit years (YYYY)**
+- Accepted formats: `YYYY-MM-DD` (e.g., `1976-03-19`) or `MM/DD/YYYY` (e.g., `03/19/1976`)
+- **Not accepted:** 2-digit years like `MM/DD/YY` (e.g., `03/19/76`)
+- This requirement applies to CSV imports, forms, and all API requests
+- Dates are stored in the database as `YYYY-MM-DD` format
 
 ### 📄 PDF Generation Features
 **Status:** ✅ IMPLEMENTED

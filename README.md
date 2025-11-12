@@ -8,6 +8,27 @@ This project aims to create an interactive family tree application.
 *   Drill down into individuals to view biographic and contact information.
 *   Display a list of upcoming birthdays.
 
+## Date Format Requirements
+
+**All dates must use 4-digit years (YYYY) - no exceptions.**
+
+### Accepted Formats:
+- `YYYY-MM-DD` (ISO format, preferred) - Example: `1976-03-19`
+- `MM/DD/YYYY` - Example: `03/19/1976`
+- `YYYY` (year only) - Example: `1976`
+
+### Not Accepted:
+- ❌ `MM/DD/YY` (2-digit years) - Example: `03/19/76`
+- ❌ `YY` (2-digit year only) - Example: `76`
+
+**This applies to:**
+- CSV imports
+- Form entries
+- API requests
+- All date fields (birth dates, death dates)
+
+**Why?** 4-digit years eliminate ambiguity and ensure accurate date comparisons for relationship validation.
+
 ## Tech Stack (Initial)
 
 *   HTML
