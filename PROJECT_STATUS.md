@@ -93,7 +93,7 @@ An interactive family tree application for managing family relationships, contac
 - Add/Edit/Delete family members
 - Comprehensive person fields:
   - Basic: First name, last name, middle name, maiden name, nickname
-  - Dates: Birth date, death date
+  - Dates: Birth date, death date (must use 4-digit years: YYYY-MM-DD or MM/DD/YYYY format)
   - Contact: Email, phone, full address (street, city, state, zip)
   - Other: Gender, pronouns, bio, notes, SMS preference
 - CRUD operations via REST API
