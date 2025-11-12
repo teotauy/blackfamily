@@ -305,17 +305,23 @@ app.post('/api/relationships', (req, res) => {
     const childId = type === 'parent' ? person_id : related_id;
     const parentId = type === 'parent' ? related_id : person_id;
 
-    db.get('SELECT id, birthDate FROM people WHERE id = ?', [parentId], (parentErr, parentRow) => {
+    db.get('SELECT id, name, birthDate FROM people WHERE id = ?', [parentId], (parentErr, parentRow) => {
       if (parentErr) return res.status(500).json({ error: parentErr.message });
-      db.get('SELECT id, birthDate FROM people WHERE id = ?', [childId], (childErr, childRow) => {
+      db.get('SELECT id, name, birthDate FROM people WHERE id = ?', [childId], (childErr, childRow) => {
         if (childErr) return res.status(500).json({ error: childErr.message });
 
-        const parentDate = parentRow ? parseFamilyDate(parentRow.birthDate) : null;
-        const childDate = childRow ? parseFamilyDate(childRow.birthDate) : null;
+        const parentDate = parentRow && parentRow.birthDate ? parseFamilyDate(parentRow.birthDate) : null;
+        const childDate = childRow && childRow.birthDate ? parseFamilyDate(childRow.birthDate) : null;
 
+        // Only validate if both dates exist and are valid
+        // If parent date is missing, allow the relationship (user can add date later)
         if (parentDate && childDate && parentDate >= childDate) {
+          const parentName = parentRow ? parentRow.name : 'Parent';
+          const childName = childRow ? childRow.name : 'Child';
+          const parentDateStr = parentRow.birthDate || 'Unknown';
+          const childDateStr = childRow.birthDate || 'Unknown';
           return res.status(400).json({
-            error: 'Parent birth date must be earlier than the child’s birth date. Please verify the dates.'
+            error: `Parent birth date must be earlier than the child's birth date. ${parentName}'s birth date (${parentDateStr}) must be before ${childName}'s birth date (${childDateStr}). Please verify the dates.`
           });
         }
 
