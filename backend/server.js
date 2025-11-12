@@ -19,8 +19,18 @@ function parseFamilyDate(value) {
     }
   }
 
-  // Try parsing MM/DD/YY or MM/DD/YYYY format first (before direct Date parsing)
-  // This ensures two-digit years are handled correctly for family tree data
+  // Prefer YYYY-MM-DD format (ISO standard, no ambiguity)
+  // This is what HTML date inputs produce
+  const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoDateMatch) {
+    const [, year, month, day] = isoDateMatch;
+    const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
+  // Try parsing MM/DD/YYYY format (4-digit year preferred)
   const parts = trimmed.split(/[\/\-]/);
   if (parts.length === 3) {
     let [month, day, year] = parts.map(part => part.trim());
@@ -30,25 +40,28 @@ function parseFamilyDate(value) {
 
     if (!isNaN(monthNum) && !isNaN(dayNum) && monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
       if (!isNaN(yearNum)) {
+        // If 2-digit year, convert to 4-digit (backward compatibility)
+        // But prefer 4-digit years going forward
         if (year.length === 2) {
-          // For family tree data, assume two-digit years are from 1900s
-          // Treat recent years (00-30) as 2000s to handle recent births
-          // This handles cases like "21" → 2021, "35" → 1935
+          // Convert 2-digit years: 00-30 → 2000-2030, 31-99 → 1931-1999
           if (yearNum <= 30) {
-            yearNum += 2000; // 00-30 → 2000-2030
+            yearNum += 2000;
           } else {
-            yearNum += 1900; // 31-99 → 1931-1999
+            yearNum += 1900;
           }
         }
-        const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
-        if (!isNaN(reconstructed.getTime())) {
-          return reconstructed;
+        // Require 4-digit years (1000-9999)
+        if (yearNum >= 1000 && yearNum <= 9999) {
+          const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
+          if (!isNaN(reconstructed.getTime())) {
+            return reconstructed;
+          }
         }
       }
     }
   }
 
-  // Fall back to direct Date parsing for other formats
+  // Fall back to direct Date parsing for other formats (like YYYY-MM-DD from Date objects)
   const direct = new Date(trimmed);
   if (!isNaN(direct.getTime())) {
     return direct;
