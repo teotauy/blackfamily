@@ -2118,26 +2118,39 @@ async function handleAddPersonFormSubmit(event) {
     // Add person to backend
     const newPersonId = await addPersonAPI(newPerson);
 
-    // Add relationships
-    const parentIdsString = document.getElementById('add-parents-ids').value;
-    const parentIds = parentIdsString ? parentIdsString.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : [];
-    for (const pid of parentIds) {
-        await addRelationshipAPI(newPersonId, pid, 'parent');
-        await addRelationshipAPI(pid, newPersonId, 'child');
-    }
-    const childrenIdsString = document.getElementById('add-children-ids').value;
-    const childrenIds = childrenIdsString ? childrenIdsString.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : [];
-    for (const cid of childrenIds) {
-        await addRelationshipAPI(newPersonId, cid, 'child');
-        await addRelationshipAPI(cid, newPersonId, 'parent');
-    }
-    const spouseIdFromAutocomplete = document.getElementById('add-spouse-id-hidden').value;
-    if (spouseIdFromAutocomplete) {
-        const spouseNumId = parseInt(spouseIdFromAutocomplete);
-        if (!isNaN(spouseNumId)) {
-            await addRelationshipAPI(newPersonId, spouseNumId, 'spouse');
-            await addRelationshipAPI(spouseNumId, newPersonId, 'spouse');
+    // Add relationships (with date warning handling)
+    try {
+        const parentIdsString = document.getElementById('add-parents-ids').value;
+        const parentIds = parentIdsString ? parentIdsString.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : [];
+        for (const pid of parentIds) {
+            await addRelationshipAPI(newPersonId, pid, 'parent');
+            await addRelationshipAPI(pid, newPersonId, 'child');
         }
+        const childrenIdsString = document.getElementById('add-children-ids').value;
+        const childrenIds = childrenIdsString ? childrenIdsString.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : [];
+        for (const cid of childrenIds) {
+            await addRelationshipAPI(newPersonId, cid, 'child');
+            await addRelationshipAPI(cid, newPersonId, 'parent');
+        }
+        const spouseIdFromAutocomplete = document.getElementById('add-spouse-id-hidden').value;
+        if (spouseIdFromAutocomplete) {
+            const spouseNumId = parseInt(spouseIdFromAutocomplete);
+            if (!isNaN(spouseNumId)) {
+                await addRelationshipAPI(newPersonId, spouseNumId, 'spouse');
+                await addRelationshipAPI(spouseNumId, newPersonId, 'spouse');
+            }
+        }
+    } catch (error) {
+        // If user cancelled a relationship due to date warning, rollback the person creation
+        if (error.message && error.message.includes('cancelled')) {
+            try {
+                await deletePersonAPI(newPersonId);
+            } catch (deleteErr) {
+                console.error('Failed to rollback person creation:', deleteErr);
+            }
+            throw new Error('Person creation cancelled due to date validation warning.');
+        }
+        throw error;
     }
     // Reload data and UI
     await loadFamilyDataFromAPI();
