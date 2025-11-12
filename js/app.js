@@ -960,7 +960,33 @@ async function loadFamilyDataFromAPI() {
         }
         // apiCall already parses JSON when content-type is application/json
         // So peopleRes and relsRes are already arrays/objects, not Response objects
-        const people = peopleRes;
+        let people = peopleRes;
+        
+        // Deduplicate people based on name + birthdate + phone (same key as CSV upload)
+        const normalizeValue = (val) => (val || '').trim().toLowerCase();
+        const toKey = (firstName, lastName, dob, phone) => {
+            return `${normalizeValue(firstName)}|${normalizeValue(lastName)}|${normalizeValue(dob)}|${normalizeValue(phone)}`;
+        };
+        
+        const seenKeys = new Map(); // key -> person (keep the first one encountered)
+        const deduplicatedPeople = [];
+        
+        people.forEach(person => {
+            const parts = (person.name || '').trim().split(/\s+/);
+            const last = parts.length > 1 ? parts.pop() : '';
+            const first = parts.join(' ');
+            const key = toKey(first, last, person.birthDate || '', person.contact_phone || '');
+            
+            if (!seenKeys.has(key)) {
+                seenKeys.set(key, person);
+                deduplicatedPeople.push(person);
+            } else {
+                console.warn(`Duplicate person detected and skipped: ${person.name} (ID: ${person.id}). Keeping ID: ${seenKeys.get(key).id}`);
+            }
+        });
+        
+        people = deduplicatedPeople;
+        
         const relationships = relsRes;
         // Build relationships into people
         const personMap = new Map(people.map(p => [p.id, { ...p, parents: [], children: [], marriages: [], contact: {
