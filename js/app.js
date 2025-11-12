@@ -2121,10 +2121,13 @@ function getUpcomingBirthdays(people, daysInAdvance) {
     const today = new Date();
     today.setHours(0,0,0,0); // Normalize to start of today
     const upcoming = [];
+    const seenIds = new Set(); // Track person IDs to avoid duplicates
 
     people.forEach(person => {
         if (!person.birthDate) return;
-
+        if (!person.id) return; // Skip if no ID
+        if (seenIds.has(person.id)) return; // Skip duplicates
+        
         const birthDate = new Date(person.birthDate);
         if (isNaN(birthDate.getTime())) return; // Invalid date
 
@@ -2139,6 +2142,7 @@ function getUpcomingBirthdays(people, daysInAdvance) {
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays >= 0 && diffDays <= daysInAdvance) {
+            seenIds.add(person.id); // Mark as seen
             upcoming.push({ ...person, daysUntilBirthday: diffDays });
         }
     });
