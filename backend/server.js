@@ -9,18 +9,18 @@ function parseFamilyDate(value) {
   const trimmed = String(value).trim();
   if (!trimmed) return null;
 
+  // Require 4-digit years (YYYY) - no ambiguity
   // Handle year-only format (e.g., "1955")
   const yearOnly = /^\d{4}$/.test(trimmed);
   if (yearOnly) {
     const year = parseInt(trimmed, 10);
     if (!isNaN(year) && year >= 1000 && year <= 9999) {
-      // Use January 1st of that year for comparison purposes
       return new Date(year, 0, 1);
     }
+    return null; // Reject 2-digit years
   }
 
-  // Prefer YYYY-MM-DD format (ISO standard, no ambiguity)
-  // This is what HTML date inputs produce
+  // Prefer YYYY-MM-DD format (ISO standard, what HTML date inputs produce)
   const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (isoDateMatch) {
     const [, year, month, day] = isoDateMatch;
@@ -30,41 +30,35 @@ function parseFamilyDate(value) {
     }
   }
 
-  // Try parsing MM/DD/YYYY format (4-digit year preferred)
+  // Accept MM/DD/YYYY format (but require 4-digit year)
   const parts = trimmed.split(/[\/\-]/);
   if (parts.length === 3) {
     let [month, day, year] = parts.map(part => part.trim());
     const monthNum = parseInt(month, 10);
     const dayNum = parseInt(day, 10);
-    let yearNum = parseInt(year, 10);
+    const yearNum = parseInt(year, 10);
+
+    // Require 4-digit year - reject 2-digit years
+    if (year.length !== 4 || isNaN(yearNum) || yearNum < 1000 || yearNum > 9999) {
+      return null;
+    }
 
     if (!isNaN(monthNum) && !isNaN(dayNum) && monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
-      if (!isNaN(yearNum)) {
-        // If 2-digit year, convert to 4-digit (backward compatibility)
-        // But prefer 4-digit years going forward
-        if (year.length === 2) {
-          // Convert 2-digit years: 00-30 → 2000-2030, 31-99 → 1931-1999
-          if (yearNum <= 30) {
-            yearNum += 2000;
-          } else {
-            yearNum += 1900;
-          }
-        }
-        // Require 4-digit years (1000-9999)
-        if (yearNum >= 1000 && yearNum <= 9999) {
-          const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
-          if (!isNaN(reconstructed.getTime())) {
-            return reconstructed;
-          }
-        }
+      const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
+      if (!isNaN(reconstructed.getTime())) {
+        return reconstructed;
       }
     }
   }
 
-  // Fall back to direct Date parsing for other formats (like YYYY-MM-DD from Date objects)
+  // Try direct Date parsing (handles Date objects and some other formats)
   const direct = new Date(trimmed);
   if (!isNaN(direct.getTime())) {
-    return direct;
+    // Verify it's a reasonable date (has 4-digit year)
+    const year = direct.getFullYear();
+    if (year >= 1000 && year <= 9999) {
+      return direct;
+    }
   }
 
   return null;
@@ -233,11 +227,33 @@ app.get('/api/people/:id', (req, res) => {
   });
 });
 
+// Helper to normalize date to YYYY-MM-DD format (requires 4-digit year)
+function normalizeDateToYYYYMMDD(dateStr) {
+  if (!dateStr) return null;
+  const parsed = parseFamilyDate(dateStr);
+  if (!parsed) return null; // Invalid date (likely 2-digit year)
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Add a person
 app.post('/api/people', (req, res) => {
   const p = req.body;
+  const birthDate = normalizeDateToYYYYMMDD(p.birthDate || p.birth_date);
+  const deathDate = normalizeDateToYYYYMMDD(p.deathDate || p.death_date);
+  
+  // Validate dates - if provided but invalid, return error
+  if ((p.birthDate || p.birth_date) && !birthDate) {
+    return res.status(400).json({ error: 'Birth date must use 4-digit year (YYYY-MM-DD or MM/DD/YYYY format). Example: 1976-03-19 or 03/19/1976' });
+  }
+  if ((p.deathDate || p.death_date) && !deathDate) {
+    return res.status(400).json({ error: 'Death date must use 4-digit year (YYYY-MM-DD or MM/DD/YYYY format). Example: 2020-01-15 or 01/15/2020' });
+  }
+  
   db.run(`INSERT INTO people (name, middle_name, maiden_name, nickname, birthDate, deathDate, pronouns, bio, notes, contact_email, contact_phone, contact_street, contact_city, contact_state, contact_zip, can_receive_sms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [p.name, p.middle_name, p.maiden_name, p.nickname, p.birthDate || p.birth_date, p.deathDate || p.death_date, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure'],
+    [p.name, p.middle_name, p.maiden_name, p.nickname, birthDate, deathDate, p.pronouns, p.bio, p.notes, p.contact_email || p.contact?.email, p.contact_phone || p.contact?.phone, p.contact_street || p.contact?.street, p.contact_city || p.contact?.city, p.contact_state || p.contact?.state, p.contact_zip || p.contact?.zip, p.can_receive_sms || 'unsure'],
     function(err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ id: this.lastID });
@@ -274,16 +290,37 @@ app.post('/api/people/bulk', (req, res) => {
   if (!Array.isArray(people)) {
     return res.status(400).json({ error: 'Expected an array of people' });
   }
-  const placeholders = people.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+  
+  // Normalize dates to YYYY-MM-DD format (requires 4-digit years)
+  const normalizedPeople = people.map(p => ({
+    ...p,
+    birthDate: normalizeDateToYYYYMMDD(p.birth_date || p.birthDate),
+    deathDate: normalizeDateToYYYYMMDD(p.death_date || p.deathDate)
+  }));
+  
+  // Check for invalid dates
+  const invalidDates = normalizedPeople.filter((p, idx) => {
+    const original = people[idx];
+    return (original.birth_date || original.birthDate) && !p.birthDate ||
+           (original.death_date || original.deathDate) && !p.deathDate;
+  });
+  
+  if (invalidDates.length > 0) {
+    return res.status(400).json({ 
+      error: `Invalid dates found. All dates must use 4-digit years (YYYY-MM-DD or MM/DD/YYYY). Found ${invalidDates.length} person(s) with invalid dates.` 
+    });
+  }
+  
+  const placeholders = normalizedPeople.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
   const values = [];
-  people.forEach(p => {
+  normalizedPeople.forEach(p => {
     values.push(
       p.name || '',
       p.middle_name || '',
       p.maiden_name || '',
       p.nickname || '',
-      p.birth_date || '',
-      p.death_date || '',
+      p.birthDate || '',
+      p.deathDate || '',
       p.pronouns || '',
       p.bio || '',
       p.notes || '',
@@ -302,7 +339,7 @@ app.post('/api/people/bulk', (req, res) => {
       console.error('Bulk insert error:', err);
       return res.status(500).json({ error: 'Failed to insert people' });
     }
-    res.json({ message: 'People imported', count: people.length });
+    res.json({ message: 'People imported', count: normalizedPeople.length });
   });
 });
 
