@@ -958,8 +958,9 @@ async function loadFamilyDataFromAPI() {
             console.error('Failed to load data from API');
             return;
         }
-        const people = await peopleRes.json();
-        const relationships = await relsRes.json();
+        // apiCall already parses JSON, so peopleRes and relsRes are already objects
+        const people = Array.isArray(peopleRes) ? peopleRes : (peopleRes.json ? await peopleRes.json() : peopleRes);
+        const relationships = Array.isArray(relsRes) ? relsRes : (relsRes.json ? await relsRes.json() : relsRes);
         // Build relationships into people
         const personMap = new Map(people.map(p => [p.id, { ...p, parents: [], children: [], marriages: [], contact: {
             email: p.contact_email,
