@@ -34,10 +34,16 @@ body {
 
 #header-auth-section {
     display: flex;
-    justify-content: flex-end;
-    padding: 24px 24px 0;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
     max-width: 1200px;
     margin: 0 auto;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .auth-banner {
@@ -88,6 +94,47 @@ main {
     grid-template-columns: minmax(300px, 360px) 1fr;
     gap: 24px;
     align-items: start;
+}
+
+#top-search-bar {
+    flex: 1;
+    max-width: 500px;
+    margin-right: 24px;
+}
+
+#top-search-bar #search-section-container {
+    position: relative;
+}
+
+#top-search-bar #family-search-input {
+    width: 100%;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#top-search-bar #family-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+#top-search-bar #family-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+    box-shadow: var(--shadow-tight);
 }
 
 .left-column,
@@ -432,10 +479,50 @@ button.small {
     min-width: 90px;
 }
 
+.inline-spouse-input-container {
+    position: relative;
+}
+
 .chip-group {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    align-items: center;
+}
+
+.empty-pill.clickable-add {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.empty-pill.clickable-add:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.add-more-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    background: var(--surface-muted);
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 32px;
+    height: 32px;
+}
+
+.add-more-chip:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+    border-style: solid;
 }
 
 .relation-chip.clickable-relation {
@@ -462,9 +549,11 @@ button.small {
     align-items: center;
     padding: 6px 14px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
     color: var(--text-secondary);
     font-size: 0.85rem;
+    transition: all 0.2s ease;
 }
 
 .info-row {

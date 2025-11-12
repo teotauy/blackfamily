@@ -142,22 +142,86 @@ function handleCSVUpload(event) {
     const previewDiv = document.getElementById('csv-preview');
     const uploadBtn = document.getElementById('upload-btn');
     
+    if (!errorDiv || !successDiv || !previewDiv || !uploadBtn) {
+        console.error('CSV upload modal elements not found');
+        alert('CSV upload modal elements not found. Please refresh the page.');
+        return;
+    }
+    
+    // Clear previous messages
+    errorDiv.textContent = '';
+    successDiv.textContent = '';
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+    
     if (!file) return;
     
     const reader = new FileReader();
+    reader.onerror = function(e) {
+        console.error('File reading error:', e);
+        errorDiv.textContent = 'Error reading CSV file. Please make sure the file is valid.';
+        errorDiv.style.display = 'block';
+        successDiv.style.display = 'none';
+        previewDiv.style.display = 'none';
+        uploadBtn.style.display = 'none';
+    };
     reader.onload = function(e) {
         try {
             const csv = e.target.result;
-            const lines = csv.split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            if (!csv || csv.trim().length === 0) {
+                throw new Error('CSV file is empty');
+            }
+            
+            const lines = csv.split('\n').filter(line => line.trim());
+            if (lines.length < 2) {
+                throw new Error('CSV file must have at least a header row and one data row');
+            }
+            
+            // Simple CSV parser that handles quoted fields
+            const parseCSVLine = (line) => {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    const nextChar = line[i + 1];
+                    
+                    if (char === '"') {
+                        if (inQuotes && nextChar === '"') {
+                            current += '"';
+                            i++; // Skip next quote
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                result.push(current.trim());
+                return result;
+            };
+            
+            const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, ''));
+            if (headers.length === 0) {
+                throw new Error('CSV file has no headers');
+            }
+            
             const rows = lines.slice(1).filter(line => line.trim()).map(line => {
-                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
+                const values = parseCSVLine(line).map(v => v.replace(/^"|"$/g, ''));
                 const row = {};
                 headers.forEach((header, index) => {
                     row[header] = values[index] || '';
                 });
                 return row;
             });
+            
+            if (rows.length === 0) {
+                throw new Error('CSV file has no data rows');
+            }
             
             csvData = rows;
             
@@ -185,14 +249,20 @@ function handleCSVUpload(event) {
             previewDiv.style.display = 'block';
             
             successDiv.textContent = `Found ${rows.length} people in CSV`;
+            successDiv.style.display = 'block';
             errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
             uploadBtn.disabled = false;
             uploadBtn.style.display = 'inline-block';
         } catch (error) {
+            console.error('CSV parsing error:', error);
             errorDiv.textContent = 'Error parsing CSV file: ' + error.message;
+            errorDiv.style.display = 'block';
             successDiv.textContent = '';
+            successDiv.style.display = 'none';
             previewDiv.style.display = 'none';
             uploadBtn.style.display = 'none';
+            uploadBtn.disabled = true;
         }
     };
     
@@ -200,20 +270,34 @@ function handleCSVUpload(event) {
 }
 
 async function uploadToBackend() {
+    console.log('uploadToBackend called');
     const errorDiv = document.getElementById('csv-error');
     const successDiv = document.getElementById('csv-success');
     const uploadBtn = document.getElementById('upload-btn');
     
+    console.log('CSV upload elements:', { errorDiv: !!errorDiv, successDiv: !!successDiv, uploadBtn: !!uploadBtn });
+    
+    if (!errorDiv || !successDiv || !uploadBtn) {
+        console.error('CSV upload modal elements not found');
+        alert('CSV upload modal elements not found. Please refresh the page.');
+        return;
+    }
+    
     if (!authToken) {
+        console.error('No auth token');
         errorDiv.textContent = 'Please login first';
+        errorDiv.style.display = 'block';
         return;
     }
     
-    if (!csvData.length) {
-        errorDiv.textContent = 'No CSV data to upload';
+    if (!csvData || !csvData.length) {
+        console.error('No CSV data:', csvData);
+        errorDiv.textContent = 'No CSV data to upload. Please select a CSV file first.';
+        errorDiv.style.display = 'block';
         return;
     }
     
+    console.log(`Starting upload of ${csvData.length} rows`);
     uploadBtn.textContent = 'Uploading...';
     uploadBtn.disabled = true;
     
@@ -258,23 +342,50 @@ async function uploadToBackend() {
         });
         
         // Upload each person to the backend
-        for (const person of peopleData) {
+        for (let i = 0; i < peopleData.length; i++) {
+            const person = peopleData[i];
             if (person.skip) {
+                console.log(`Skipping duplicate: ${person.payload.name}`);
                 continue;
             }
-            const response = await fetch(`${API_BASE}/people`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify(person.payload)
-            });
             
-            if (!response.ok) {
-                throw new Error(`Failed to upload: ${response.statusText}`);
+            console.log(`Uploading person ${i + 1}/${peopleData.length}: ${person.payload.name}`);
+            
+            try {
+                const response = await fetch(`${API_BASE}/people`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(person.payload)
+                });
+                
+                if (!response.ok) {
+                    let errorMessage = `Failed to upload ${person.payload.name || 'person'}: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error) {
+                            errorMessage = `Failed to upload ${person.payload.name || 'person'}: ${errorData.error}`;
+                        }
+                    } catch (e) {
+                        // If response isn't JSON, use statusText
+                        const text = await response.text();
+                        if (text) {
+                            errorMessage += ` - ${text}`;
+                        }
+                    }
+                    console.error('Upload failed:', errorMessage);
+                    throw new Error(errorMessage);
+                }
+                
+                const result = await response.json();
+                console.log(`Successfully uploaded: ${person.payload.name} (ID: ${result.id})`);
+                insertedCount += 1;
+            } catch (error) {
+                console.error(`Error uploading ${person.payload.name}:`, error);
+                throw error; // Re-throw to be caught by outer try-catch
             }
-            insertedCount += 1;
         }
         
         successDiv.textContent = `Added ${insertedCount} new people. Skipped ${peopleData.length - insertedCount} duplicates.`;
@@ -288,11 +399,25 @@ async function uploadToBackend() {
         }
         csvData = [];
     } catch (error) {
-        errorDiv.textContent = `Upload failed: ${error.message}`;
-        successDiv.textContent = '';
+        console.error('CSV upload error:', error);
+        console.error('Error stack:', error.stack);
+        if (errorDiv) {
+            errorDiv.textContent = `Upload failed: ${error.message}`;
+            errorDiv.style.display = 'block';
+            errorDiv.style.color = '#e74c3c';
+            errorDiv.style.fontWeight = '500';
+        } else {
+            alert(`CSV Upload failed: ${error.message}`);
+        }
+        if (successDiv) {
+            successDiv.textContent = '';
+            successDiv.style.display = 'none';
+        }
     } finally {
-        uploadBtn.textContent = 'Upload to Database';
-        uploadBtn.disabled = false;
+        if (uploadBtn) {
+            uploadBtn.textContent = 'Upload to Database';
+            uploadBtn.disabled = false;
+        }
         completeLoaderRequest();
         hideGlobalLoader();
     }
@@ -965,6 +1090,38 @@ async function deleteRelationshipAPI(relId) {
     await apiCall(`/relationships/${relId}`, { method: 'DELETE' });
 }
 
+// Helper: Add spouse relationship between two people
+async function addSpouseRelationship(personId, spouseId) {
+    try {
+        await addRelationshipAPI(personId, spouseId, 'spouse');
+        await addRelationshipAPI(spouseId, personId, 'spouse');
+        await loadFamilyDataFromAPI();
+        renderFamilyTree();
+        renderUpcomingBirthdays();
+        displayPersonDetails(personId); // Refresh the view
+    } catch (error) {
+        console.error('Failed to add spouse relationship:', error);
+        alert(error.message || 'Failed to add spouse relationship');
+    }
+}
+
+// Helper: Create a new person and add them as spouse
+async function createPersonAndAddAsSpouse(personId, spouseName) {
+    try {
+        // Create new person with just the name
+        const newPerson = {
+            name: spouseName.trim()
+        };
+        const newPersonId = await addPersonAPI(newPerson);
+        
+        // Add spouse relationship
+        await addSpouseRelationship(personId, newPersonId);
+    } catch (error) {
+        console.error('Failed to create person and add as spouse:', error);
+        alert(error.message || 'Failed to create person');
+    }
+}
+
 async function deletePerson(personId) {
     const person = familyData.find(p => p.id === personId);
     if (!person) return;
@@ -1135,7 +1292,12 @@ function displayRandomFact() {
     }
 
     const randomIndex = Math.floor(Math.random() * facts.length);
-    factDisplayElement.innerHTML = `<p>${facts[randomIndex]}</p>`;
+    factDisplayElement.innerHTML = `
+        <div class="card-heading">
+            <h2>Family Highlight</h2>
+        </div>
+        <p>${facts[randomIndex]}</p>
+    `;
 }
 
 function setupAuthEventListeners() {
@@ -1201,7 +1363,11 @@ function setupAppEventListeners() {
 
     const csvUploadBtn = document.getElementById('upload-btn');
     if (csvUploadBtn) {
-        csvUploadBtn.addEventListener('click', uploadToBackend);
+        csvUploadBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Upload button clicked');
+            uploadToBackend();
+        });
     }
 
     const addPersonForm = document.getElementById('add-person-form');
@@ -1616,13 +1782,18 @@ function displayPersonDetails(personId) {
         }
         const metaGridHtml = `<div class="person-meta-grid">${metaCards.join('')}</div>`;
 
-        const renderRelationChips = (people, emptyText) => {
+        const renderRelationChips = (people, emptyText, type) => {
             if (!people.length) {
-                return `<span class="empty-pill">${emptyText}</span>`;
+                return `<span class="empty-pill clickable-add" data-add-type="${type}">${emptyText}</span>`;
             }
-            return people.map(relative => 
+            const chips = people.map(relative => 
                 `<span class="relation-chip clickable-relation" data-person-id="${relative.id}">${relative.nickname || relative.name}</span>`
             ).join('');
+            // Add "+" button after last child
+            if (type === 'children') {
+                return chips + `<span class="add-more-chip clickable-add" data-add-type="${type}" title="Add another child">+</span>`;
+            }
+            return chips;
         };
 
         const parentPeople = Array.from(person.parents || [])
@@ -1638,13 +1809,16 @@ function displayPersonDetails(personId) {
                 const labels = [spouse.nickname || spouse.name];
                 if (marriage.weddingDate) labels.push(`m. ${marriage.weddingDate}`);
                 if (marriage.divorceDate) labels.push(`d. ${marriage.divorceDate}`);
-                return `<span class="relation-chip">${labels.join(' • ')}</span>`;
+                return `<span class="relation-chip clickable-relation" data-person-id="${spouse.id}">${labels.join(' • ')}</span>`;
             })
             .filter(Boolean);
 
-        const parentsHtml = renderRelationChips(parentPeople, 'Add parents');
-        const childrenHtml = renderRelationChips(childrenPeople, 'Add children');
-        const spouseHtml = spouseChipsList.length ? spouseChipsList.join('') : `<span class="empty-pill">Add spouse</span>`;
+        const parentsHtml = renderRelationChips(parentPeople, 'Add parents', 'parents');
+        const childrenHtml = renderRelationChips(childrenPeople, 'Add children', 'children');
+        // Spouse field: editable input if no spouse, chip if spouse exists
+        const spouseHtml = spouseChipsList.length 
+            ? spouseChipsList.join('') 
+            : `<span class="empty-pill clickable-add" data-add-type="spouse">Add spouse</span>`;
 
         const contactRows = [];
         const contact = person.contact || {};
@@ -1772,6 +1946,14 @@ function displayPersonDetails(personId) {
                 if (relatedPersonId) {
                     displayPersonDetails(relatedPersonId);
                 }
+            });
+        });
+
+        // Attach event listeners for "Add" pills and "+" buttons
+        document.querySelectorAll('.clickable-add').forEach(addBtn => {
+            addBtn.style.cursor = 'pointer';
+            addBtn.addEventListener('click', function() {
+                showEditRelationshipsModal(personId);
             });
         });
 
@@ -2243,6 +2425,8 @@ function calculateAgeDisplay(person) {
 function handleFamilySearch() {
     const searchInput = document.getElementById('family-search-input');
     const resultsContainer = document.getElementById('family-search-results');
+    if (!searchInput || !resultsContainer) return;
+    
     const query = searchInput.value.toLowerCase().trim();
 
     resultsContainer.innerHTML = ''; // Clear previous results

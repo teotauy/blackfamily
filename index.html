@@ -9,7 +9,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-    <div id="header-auth-section"></div>
+    <div id="header-auth-section">
+      <div id="top-search-bar">
+        <div id="search-section-container">
+          <input id="family-search-input" placeholder="Search family...">
+          <div id="family-search-results"></div>
+        </div>
+      </div>
+    </div>
     <div id="global-loader" class="global-loader" aria-hidden="true">
       <div class="loader-content" role="status" aria-live="polite">
         <div class="loader-spinner"></div>
@@ -47,14 +54,6 @@
 
         <main id="main-content" class="app-grid" style="display:none;">
           <div class="left-column">
-            <div id="search-section-container" class="app-card">
-              <div class="card-heading">
-                <h2>Find Someone</h2>
-                <p class="section-subtitle">Search by name, nickname, or phone.</p>
-              </div>
-              <input id="family-search-input" placeholder="Search family...">
-              <div id="family-search-results"></div>
-            </div>
             <div id="actions-toolbar" class="app-card toolbar-card">
               <button id="add-person-button" type="button">Add Person</button>
               <button id="import-csv-button" type="button">Import CSV</button>
@@ -234,8 +233,8 @@
                 
                 <input type="file" id="csv-file" accept=".csv" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px;">
                 <div id="csv-preview" style="display: none; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; margin: 15px 0;"></div>
-                <div id="csv-error" style="color: #e74c3c; margin: 10px 0;"></div>
-                <div id="csv-success" style="color: #27ae60; margin: 10px 0;"></div>
+                <div id="csv-error" style="color: #e74c3c; margin: 10px 0; display: none; font-weight: 500;"></div>
+                <div id="csv-success" style="color: #27ae60; margin: 10px 0; display: none; font-weight: 500;"></div>
                 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button onclick="closeCSVModal()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancel</button>
