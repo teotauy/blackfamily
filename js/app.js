@@ -2,7 +2,9 @@ const generationColors = ['#4A90E2', '#50E3C2', '#F5A623', '#BD10E0', '#7ED321',
 const defaultProfilePic = "images/placeholder_default.png"; // Path to your default placeholder
 
 // --- API URL ---
-const API_BASE = 'https://blackfamilybackend.onrender.com/api';
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+  : 'https://blackfamilybackend.onrender.com/api';
 
 // --- Onboarding State ---
 let currentStep = 1;
