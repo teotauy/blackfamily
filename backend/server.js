@@ -6,6 +6,9 @@ const PORT = process.env.PORT || 5000;
 
 function parseFamilyDate(value) {
   if (!value) return null;
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
   const trimmed = String(value).trim();
   if (!trimmed) return null;
 
@@ -24,10 +27,19 @@ function parseFamilyDate(value) {
   const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (isoDateMatch) {
     const [, year, month, day] = isoDateMatch;
-    const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
-    if (!isNaN(date.getTime())) {
+    const yearNum = parseInt(year, 10);
+    const monthNum = parseInt(month, 10);
+    const dayNum = parseInt(day, 10);
+    const date = new Date(yearNum, monthNum - 1, dayNum);
+    if (
+      !isNaN(date.getTime()) &&
+      date.getFullYear() === yearNum &&
+      date.getMonth() === monthNum - 1 &&
+      date.getDate() === dayNum
+    ) {
       return date;
     }
+    return null;
   }
 
   // Accept MM/DD/YYYY format (but require 4-digit year)
@@ -45,19 +57,14 @@ function parseFamilyDate(value) {
 
     if (!isNaN(monthNum) && !isNaN(dayNum) && monthNum >= 1 && monthNum <= 12 && dayNum >= 1 && dayNum <= 31) {
       const reconstructed = new Date(yearNum, monthNum - 1, dayNum);
-      if (!isNaN(reconstructed.getTime())) {
+      if (
+        !isNaN(reconstructed.getTime()) &&
+        reconstructed.getFullYear() === yearNum &&
+        reconstructed.getMonth() === monthNum - 1 &&
+        reconstructed.getDate() === dayNum
+      ) {
         return reconstructed;
       }
-    }
-  }
-
-  // Try direct Date parsing (handles Date objects and some other formats)
-  const direct = new Date(trimmed);
-  if (!isNaN(direct.getTime())) {
-    // Verify it's a reasonable date (has 4-digit year)
-    const year = direct.getFullYear();
-    if (year >= 1000 && year <= 9999) {
-      return direct;
     }
   }
 
